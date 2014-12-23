@@ -61,7 +61,6 @@ class ActiveScriptRuby
         instance_eval("#{name.capitalize} = @#{name} = nil")
       end
       @named_items[name] = nil
-    }
     end
   end
   
