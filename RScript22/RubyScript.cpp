@@ -391,6 +391,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::InterruptScriptThread(
 #endif
     SetThreadContext(m_hThread, &con);
     ResumeThread(m_hThread);
+    return S_OK;
 }
         
 HRESULT STDMETHODCALLTYPE CRubyScript::Clone( 
