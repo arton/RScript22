@@ -18,8 +18,8 @@ class ActiveScriptRuby
     @named_items = {}
   end
   
-  def to_variant(obj = nil)
-    WIN32OLE_VARIANT.new(obj ? obj : self)
+  def to_variant(obj)
+    WIN32OLE_VARIANT.new(obj)
   end
 
   alias :rubyize :to_variant
