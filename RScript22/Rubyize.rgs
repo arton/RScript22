@@ -1,0 +1,26 @@
+HKCR
+{
+	ruby.object.%RSCRIPT_VERSION% = s 'Rubyize Class'
+	{
+		CLSID = s '%CLSID%'
+	}
+	ruby.object = s 'Rubyize Class'
+	{
+		CLSID = s '%CLSID%'
+		CurVer = s 'ruby.object.%RSCRIPT_VERSION%'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove %CLSID% = s 'Rubyize Class (%RSCRIPT_VERSION%.0)'
+		{
+			ProgID = s 'ruby.object.%RSCRIPT_VERSION%'
+			VersionIndependentProgID = s 'ruby.object'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			TypeLib = s '{10D4CB67-C6A3-46CF-BE81-B15899ABA602}'
+		}
+	}
+}

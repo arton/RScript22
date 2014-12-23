@@ -1,0 +1,57 @@
+// RScript22.idl : RScript22 の IDL ソース
+//
+
+// このファイルは、タイプ ライブラリ (RScript22.tlb) およびマーシャリング コードを
+// 作成するために MIDL ツールによって処理されます。
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "activscp.idl";
+
+#if defined(RUBY_2_2)
+#define CLSID_RUBYSCRIPT uuid(456A3763-90A4-4F2A-BFF1-4B773C1056EC)
+#define CLSID_RUBYIZE uuid(0BCFF05A-C2BF-4CB2-A778-3428A8E85A21)
+#else
+#error "no ruby version defined"
+#endif
+
+[
+	uuid(10D4CB67-C6A3-46CF-BE81-B15899ABA602),
+	version(2.2),
+	helpstring("ActiveScriptRuby 2.2")
+]
+library RScript22Lib
+{
+	importlib("stdole2.tlb");
+	[
+		CLSID_RUBYSCRIPT,
+		helpstring("RubyScript Language (module)")
+	]
+	coclass RubyScript
+	{
+		[default] interface IActiveScript;
+	};
+	[
+		object,
+		uuid(0A4CBEBD-C46B-4A7C-A1E2-AD474C330C7A),
+		dual,
+		helpstring("rubyize other scripting object"),
+		pointer_default(unique)
+	]
+	interface IRubyize : IDispatch
+	{
+		[id(1), propget] HRESULT Version([out, retval]BSTR* pVersion);
+		[id(2), propget] HRESULT RubyVersion([out, retval]BSTR* pVersion);
+		[id(10)] HRESULT rubyize([in]VARIANT val, [out, retval]VARIANT* pObj);
+		[id(11)] HRESULT erubyize([in]BSTR script, [out, retval]VARIANT* pObj);
+	};
+	[
+		CLSID_RUBYIZE,
+		helpstring("Rubyize Class")
+	]
+	coclass Rubyize
+	{
+		[default] interface IRubyize;
+	};
+};
+

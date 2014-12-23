@@ -1,0 +1,6 @@
+=being
+  Copyright(c) 2014 arton
+=end
+
+require 'win32ole'
+

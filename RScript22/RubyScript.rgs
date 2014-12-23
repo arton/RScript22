@@ -1,0 +1,35 @@
+HKCR
+{
+	RubyScript.%RSCRIPT_VERSION% = s 'RubyScript Language (module)'
+	{
+		CLSID = s '%CLSID%'
+		OLEScript = s ''
+	}
+	RubyScript = s 'RubyScript Language (module)'
+	{
+		CLSID = s '%CLSID%'
+		CurVer = s 'RubyScript.%RSCRIPT_VERSION%'
+		OLEScript = s ''
+	}
+	NoRemove CLSID
+	{
+		ForceRemove %CLSID% = s 'RubyScript Language (module)'
+		{
+			ProgID = s 'RubyScript.%RSCRIPT_VERSION%'
+			OLEScript = s ''
+			'Implemented Categories' = s ''
+			{
+				{F0B7A1A1-9847-11CF-8F20-00805F2CD064} = s ''
+				{F0B7A1A2-9847-11CF-8F20-00805F2CD064} = s ''
+			}
+			VersionIndependentProgID = s 'RubyScript'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Both'
+			}
+			TypeLib = s '{10D4CB67-C6A3-46CF-BE81-B15899ABA602}'
+			Version = s '%RSCRIPT_VERSION%'
+		}
+	}
+}
