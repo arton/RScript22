@@ -21,10 +21,8 @@ DEFINE_GUID(SID_GetCaller, 0x4717cc40, 0xbcb9, 0x11d0, 0x93, 0x36, 0x0, 0xa0, 0x
 
 CRScript22Module _AtlModule;
 
-BEGIN_OBJECT_MAP(ObjectMap)
-OBJECT_ENTRY(CLSID_Rubyize, CRubyize)
-OBJECT_ENTRY(CLSID_RubyScript, CRubyScript)
-END_OBJECT_MAP()
+OBJECT_ENTRY_AUTO(CLSID_Rubyize, CRubyize)
+OBJECT_ENTRY_AUTO(CLSID_RubyScript, CRubyScript)
 
 _ATL_REGMAP_ENTRY CRubyize::RegEntries[] = {
 	{ L"RSCRIPT_VERSION", RSCRIPT_VERSION },
