@@ -58,8 +58,6 @@ BEGIN_COM_MAP(CRubyScript)
     COM_INTERFACE_ENTRY_AGGREGATE(IID_IMarshal, m_pUnkMarshaler.p)
 END_COM_MAP()
 
-
-
     DECLARE_PROTECT_FINAL_CONSTRUCT()
     DECLARE_GET_CONTROLLING_UNKNOWN()
 
@@ -92,6 +90,11 @@ END_COM_MAP()
     inline void CopyPersistent(int n, std::string& s) { m_nStartLinePersistent = n; m_strScriptPersistent = s; }
     HRESULT EvalString(int line, int len, LPCSTR script, VARIANT* result = NULL, EXCEPINFO FAR* pExcepInfo = NULL, DWORD dwFlags = 0);
 
+    inline void SetPassedObject(VARIANT& v)
+    {
+        _ASSERT(m_pPassedObject);
+        VariantCopy(m_pPassedObject, &v);
+    }
 public:
     // IServiceProvider
     HRESULT STDMETHODCALLTYPE QueryService(
@@ -254,6 +257,7 @@ private:
     void UnbindNamedItem();
     void AddConst(LPCOLESTR, VARIANT&);
     IDispatch* CreateDispatch(VALUE obj = Qnil);
+    VARIANT* m_pPassedObject;
     HRESULT LoadTypeLib(REFGUID rguidTypeLib, DWORD dwMajor, DWORD dwMinor, ITypeLib** ppResult);
 };
 

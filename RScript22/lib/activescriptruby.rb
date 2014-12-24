@@ -14,12 +14,17 @@ class ActiveScriptRuby
     def hash; obj.hash; end
   end
   
-  def initialize
+  def initialize(bridge)
+    @bridge = bridge
     @named_items = {}
   end
   
   def to_variant(obj)
-    WIN32OLE_VARIANT.new(obj)
+    @bridge.PassObject(obj)
+  end
+  
+  def self_to_variant
+    @bridge.PassObject(self)
   end
 
   alias :rubyize :to_variant

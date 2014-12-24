@@ -5,6 +5,7 @@
 #include "dllmain.h"
 #include "ItemDisp.h"
 #include "eventsink.h"
+#include "BridgeDispatch.h"
 
 // Win32OLE
 struct OLE_DATA {
@@ -40,10 +41,14 @@ static VALUE CreateWin32OLE(IDispatch* pdisp)
 }
 IDispatch* CRubyScript::CreateDispatch(VALUE obj)
 {
-    OLE_VARIANT_DATA* pvar;
-    VALUE v = rb_funcall(m_asr, rb_intern("to_variant"), 1, obj);
-    Data_Get_Struct(v, OLE_VARIANT_DATA, pvar);
-    return pvar->realvar.pdispVal;
+    VARIANT v;
+    VariantInit(&v);
+    m_pPassedObject = &v;
+    if (obj)
+        rb_funcall(m_asr, rb_intern("to_variant"), 1, obj);
+    else
+        rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
+    return (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
 }
 
 // CRubyScript
@@ -68,7 +73,8 @@ CRubyScript::CRubyScript()
       m_pUnkMarshaler(NULL),
       m_asr(Qnil),
       m_dwThreadID(GetCurrentThreadId()),
-      m_nStartLinePersistent(0)
+      m_nStartLinePersistent(0),
+      m_pPassedObject(NULL)
 {
     if (!bRubyInitialized)
     {
@@ -85,7 +91,8 @@ CRubyScript::CRubyScript()
     }
     _ASSERT(!NIL_P(s_win32ole));
     _ASSERT(!NIL_P(s_asrClass));
-    m_asr = rb_class_new_instance(0, NULL, s_asrClass);
+    VALUE v = CreateWin32OLE(new CBridgeDispatch(this));
+    m_asr = rb_class_new_instance(1, &v, s_asrClass);
     _ASSERT(!NIL_P(m_asr));
 }
 
@@ -717,7 +724,8 @@ void CRubyScript::Disconnect(bool fSinkOnly)
         }
     }
     m_mapItem.clear();
-    m_asr = rb_class_new_instance(0, NULL, s_asrClass);
+    VALUE v = CreateWin32OLE(new CBridgeDispatch(this));
+    m_asr = rb_class_new_instance(1, &v, s_asrClass);
 }
 
 void CRubyScript::CopyNamedItem(ItemMap& map)
@@ -824,11 +832,10 @@ HRESULT CRubyScript::LoadTypeLib(
 HRESULT CRubyScript::EvalString(int line, int len, LPCSTR script, VARIANT* result, EXCEPINFO FAR* pExcepInfo, DWORD dwFlags)
 {
     volatile VALUE vscript = rb_str_new(script, len);
-    VALUE vret = rb_funcall(m_asr, rb_intern("instance_eval"), 2, vscript, LONG2FIX(line));
+    volatile VALUE fn = rb_str_new_cstr("(asr)");
+    VALUE vret = rb_funcall(m_asr, rb_intern("instance_eval"), 3, vscript, fn, LONG2FIX(line));
     if (!result) return S_OK;
-
-    OLE_VARIANT_DATA* pvar;
-    VALUE v = rb_funcall(m_asr, rb_intern("to_variant"), 1, vret);
-    Data_Get_Struct(v, OLE_VARIANT_DATA, pvar);
-    return VariantCopy(result, &pvar->realvar);
+    m_pPassedObject = result;
+    rb_funcall(m_asr, rb_intern("to_variant"), 1, vret);
+    return S_OK;
 }
