@@ -192,14 +192,16 @@ STDMETHODIMP CEventSink::GetIDsOfNames(
     DISPID FAR* rgDispId)
 {
     if (!rgDispId) return E_POINTER;
-    for (unsigned int i = 0; i < cNames; i++)
+    DispMapIter it = m_mapDisp.find(*rgszNames);
+    if (it == m_mapDisp.end())
     {
-	DispMapIter it = m_mapDisp.find(*rgszNames);
-	if (it == m_mapDisp.end())
-	{
-	    return DISP_E_UNKNOWNNAME; 
-	}
-	*(rgDispId + i) = (*it).second;
+        *rgDispId = DISPID_UNKNOWN;
+        return DISP_E_UNKNOWNNAME; 
+    }
+    *rgDispId = (*it).second;
+    for (unsigned int i = 1; i < cNames; i++)
+    {
+        *(rgDispId + i) = DISPID_UNKNOWN;
     }
     return S_OK;
 }
