@@ -242,6 +242,7 @@ private:
     SCRIPTTHREADSTATE m_threadState;
     int m_nStartLinePersistent;
     std::string m_strScriptPersistent;
+    std::wstring m_strGlobalObjectName;
     static VALUE s_asrClass;
     VALUE m_asr;
     GIP(IActiveScriptSite) m_pSite;

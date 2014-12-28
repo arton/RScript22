@@ -11,31 +11,19 @@
 struct OLE_DATA {
     IDispatch *pDispatch;
 };
+
 struct OLE_VARIANT_DATA {
     VARIANT realvar;
     VARIANT var;
 };
 
 static VALUE s_win32ole(Qnil);
-static void ole_free(OLE_DATA *pole)
-{
-    if (pole->pDispatch)
-    {
-        pole->pDispatch->Release();
-    }
-    free(pole);
-}
-
-static void ole_variant_free(OLE_VARIANT_DATA* pvar)
-{
-    VariantClear(&pvar->realvar);
-    VariantClear(&pvar->var);
-}
+static VALUE s_win32ole_variant(Qnil);
 
 static VALUE CreateWin32OLE(IDispatch* pdisp)
 {
-    OLE_DATA* pole;
-    VALUE obj = Data_Make_Struct(s_win32ole, OLE_DATA, NULL, ole_free, pole);
+    volatile VALUE obj = rb_obj_alloc(s_win32ole);
+    OLE_DATA* pole = reinterpret_cast<OLE_DATA*>(DATA_PTR(obj));
     pole->pDispatch = pdisp;
     return obj;
 }
@@ -88,6 +76,7 @@ CRubyScript::CRubyScript()
         rb_require("activescriptruby");
         s_asrClass = rb_const_get(rb_cObject, rb_intern("ActiveScriptRuby"));
         s_win32ole = rb_const_get(rb_cObject, rb_intern("WIN32OLE"));
+        s_win32ole_variant = rb_const_get(rb_cObject, rb_intern("WIN32OLE_VARIANT"));
     }
     _ASSERT(!NIL_P(s_win32ole));
     _ASSERT(!NIL_P(s_asrClass));
@@ -226,6 +215,8 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddNamedItem(
     ATLTRACE(_T("AddNameItem %ls flag=%08X\n"), pstrName, dwFlags);
 
     if (!(dwFlags & SCRIPTITEM_ISVISIBLE)) return S_OK;
+    if (dwFlags & SCRIPTITEM_GLOBALMEMBERS)
+        m_strGlobalObjectName = pstrName;
 
     LPOLESTR p = wcscpy(new OLECHAR[wcslen(pstrName) + 1], pstrName);
     ItemMapIter it = m_mapItem.find(p);
@@ -252,8 +243,8 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddNamedItem(
 
 void CRubyScript::AddConst(LPCOLESTR pname, VARIANT& var)
 {
-    OLE_VARIANT_DATA* pvar;
-    VALUE val = Data_Make_Struct(s_win32ole, OLE_VARIANT_DATA, NULL, ole_variant_free, pvar);
+    volatile VALUE val = rb_obj_alloc(s_win32ole_variant);
+    OLE_VARIANT_DATA* pvar = reinterpret_cast<OLE_VARIANT_DATA*>(DATA_PTR(val));
     VariantCopy(&pvar->realvar, &var);
     VariantCopy(&pvar->var, &var);
     USES_CONVERSION;
@@ -325,7 +316,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::GetScriptDispatch(
     HRESULT hr = S_FALSE;
     *ppdisp = NULL;
     ATLTRACE(_T("GetScriptDispatch for %ls\n"), (pstrItemName) ? pstrItemName : L"GLOBALNAMESPACE");
-    if (!pstrItemName)
+    if (!pstrItemName || m_strGlobalObjectName == pstrItemName)
     {
         *ppdisp = CreateDispatch();
         return S_OK;
@@ -712,6 +703,14 @@ void CRubyScript::ConnectToEvents()
 
 void CRubyScript::Disconnect(bool fSinkOnly)
 {
+    for (EventMapIter itev = m_mapEvent.begin(); itev != m_mapEvent.end(); itev++)
+    {
+        if ((*itev).second)
+        {
+            (*itev).second->Release();
+        }
+    }
+    m_mapEvent.clear();
     if (fSinkOnly) return;	// return If triggered by SetScriptState -> DISCONNECTED
 
     rb_funcall(m_asr, rb_intern("remove_items"), 0);
