@@ -37,9 +37,8 @@ class ATL_NO_VTABLE CRubyScript :
     public CComCoClass<CRubyScript, &CLSID_RubyScript>,
     public IActiveScript,
     public IActiveScriptParse,
-#if defined(IMPLEMENTS_IACTIVESCRIPTPARSE)
-    public IActiveScriptParseProcedure,
-#endif
+    public IActiveScriptGarbageCollector,
+//    public IActiveScriptParseProcedure,
     public IServiceProvider
 {
 public:
@@ -51,9 +50,8 @@ public:
 BEGIN_COM_MAP(CRubyScript)
     COM_INTERFACE_ENTRY(IActiveScriptParse)
     COM_INTERFACE_ENTRY(IActiveScript)
-#if defined(IMPLEMENTS_IACTIVESCRIPTPARSE)
-    COM_INTERFACE_ENTRY(IActiveScriptParseProcedure)
-#endif
+    COM_INTERFACE_ENTRY(IActiveScriptGarbageCollector)
+//    COM_INTERFACE_ENTRY(IActiveScriptParseProcedure)
     COM_INTERFACE_ENTRY(IServiceProvider)
     COM_INTERFACE_ENTRY_AGGREGATE(IID_IMarshal, m_pUnkMarshaler.p)
 END_COM_MAP()
@@ -95,6 +93,7 @@ END_COM_MAP()
         _ASSERT(m_pPassedObject);
         VariantCopy(m_pPassedObject, &v);
     }
+
 public:
     // IServiceProvider
     HRESULT STDMETHODCALLTYPE QueryService(
@@ -178,7 +177,6 @@ public:
         /* [out] */ __RPC__out VARIANT *pvarResult,
         /* [out] */ __RPC__out EXCEPINFO *pexcepinfo);
 
-#if defined(IMPLEMENTS_IACTIVESCRIPTPARSE)
     // IActiveScriptParseProcedure64
     HRESULT STDMETHODCALLTYPE ParseProcedureText( 
         /* [in] */ __RPC__in LPCOLESTR pstrCode,
@@ -191,7 +189,6 @@ public:
         /* [in] */ ULONG ulStartingLineNumber,
         /* [in] */ DWORD dwFlags,
         /* [out] */ __RPC__deref_out_opt IDispatch **ppdisp);
-#endif
 #else
 	    // IActiveScriptParse32
     HRESULT STDMETHODCALLTYPE InitNew( void);
@@ -220,7 +217,6 @@ public:
         /* [out] */ __RPC__out VARIANT *pvarResult,
         /* [out] */ __RPC__out EXCEPINFO *pexcepinfo);
 
-#if defined(IMPLEMENTS_IACTIVESCRIPTPARSE)
     // IActiveScriptParseProcedure32
     HRESULT STDMETHODCALLTYPE ParseProcedureText( 
         /* [in] */ __RPC__in LPCOLESTR pstrCode,
@@ -233,8 +229,12 @@ public:
         /* [in] */ ULONG ulStartingLineNumber,
         /* [in] */ DWORD dwFlags,
         /* [out] */ __RPC__deref_out_opt IDispatch **ppdisp);
-#endif // IMPLEMENTS_IACTIVESCRIPTPARSE
 #endif // _WIN64
+
+    // IActiveScriptGarbageCollector
+    HRESULT STDMETHODCALLTYPE CollectGarbage(
+        SCRIPTGCTYPE scriptgctype
+    );
 private:
     DWORD m_dwThreadID;
     HANDLE m_hThread;
@@ -243,7 +243,9 @@ private:
     int m_nStartLinePersistent;
     std::string m_strScriptPersistent;
     std::wstring m_strGlobalObjectName;
+    static VALUE s_asrModule;
     static VALUE s_asrClass;
+    static VALUE s_asrProxy;
     VALUE m_asr;
     GIP(IActiveScriptSite) m_pSite;
     ItemMap m_mapItem;
@@ -257,9 +259,13 @@ private:
     void BindNamedItem();
     void UnbindNamedItem();
     void AddConst(LPCOLESTR, VARIANT&);
-    IDispatch* CreateDispatch(VALUE obj = Qnil);
     VARIANT* m_pPassedObject;
     HRESULT LoadTypeLib(REFGUID rguidTypeLib, DWORD dwMajor, DWORD dwMinor, ITypeLib** ppResult);
+    void CreateEventSource(IActiveScriptSite*, ItemMap::value_type&, bool);
+
+public:
+    IDispatch* CreateGlobalDispatch();
+    IDispatch* CreateDispatch(VALUE obj);
 };
 
 //OBJECT_ENTRY_AUTO(__uuidof(RubyScript), CRubyScript)

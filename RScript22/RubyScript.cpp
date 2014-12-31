@@ -6,6 +6,7 @@
 #include "ItemDisp.h"
 #include "eventsink.h"
 #include "BridgeDispatch.h"
+#include "ScriptObject.h"
 
 // Win32OLE
 struct OLE_DATA {
@@ -32,11 +33,34 @@ IDispatch* CRubyScript::CreateDispatch(VALUE obj)
     VARIANT v;
     VariantInit(&v);
     m_pPassedObject = &v;
-    if (obj)
-        rb_funcall(m_asr, rb_intern("to_variant"), 1, obj);
-    else
-        rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
+    rb_funcall(m_asr, rb_intern("to_variant"), 1, obj);
     return (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
+}
+
+IDispatch* CRubyScript::CreateGlobalDispatch()
+{
+    IDispatch* pglobal = NULL;
+    ItemMapIter it = (m_strGlobalObjectName.size() > 0) ? m_mapItem.find(m_strGlobalObjectName.c_str()) : m_mapItem.end();
+    if (it == m_mapItem.end())
+    {
+        for (it = m_mapItem.begin(); it != m_mapItem.end(); it++)
+        {
+            if ((*it).second->GetFlag() & SCRIPTITEM_GLOBALMEMBERS)
+            {
+                break;
+            }
+        }
+    }
+    if (it != m_mapItem.end())
+    {
+        pglobal = (*it).second->GetDispatch();
+    }
+    VARIANT v;
+    VariantInit(&v);
+    m_pPassedObject = &v;
+    rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
+    IDispatch* pdisp = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
+    return new CScriptObject(m_asr, pdisp, pglobal);
 }
 
 // CRubyScript
@@ -53,7 +77,9 @@ template<class T, const IID* piid> T* GetInterface(GlobalInterfacePointer<T, pii
 
 static bool bRubyInitialized(false);
 static char* asr_argv[] = {"ActiveScriptRuby", "-e", ";", NULL};
+VALUE CRubyScript::s_asrModule(Qnil);
 VALUE CRubyScript::s_asrClass(Qnil);
+VALUE CRubyScript::s_asrProxy(Qnil);
 
 CRubyScript::CRubyScript()
     : m_state(SCRIPTSTATE_UNINITIALIZED),
@@ -74,15 +100,14 @@ CRubyScript::CRubyScript()
         ruby_init();
         ruby_options(3, asr_argv);
         rb_require("activescriptruby");
-        s_asrClass = rb_const_get(rb_cObject, rb_intern("ActiveScriptRuby"));
+        s_asrModule = rb_const_get(rb_cObject, rb_intern("ActiveScriptRuby"));
+        s_asrClass = rb_const_get(s_asrModule, rb_intern("GlobalProxy"));
+        s_asrProxy = rb_const_get(s_asrModule, rb_intern("AsrProxy"));
         s_win32ole = rb_const_get(rb_cObject, rb_intern("WIN32OLE"));
         s_win32ole_variant = rb_const_get(rb_cObject, rb_intern("WIN32OLE_VARIANT"));
     }
     _ASSERT(!NIL_P(s_win32ole));
     _ASSERT(!NIL_P(s_asrClass));
-    VALUE v = CreateWin32OLE(new CBridgeDispatch(this));
-    m_asr = rb_class_new_instance(1, &v, s_asrClass);
-    _ASSERT(!NIL_P(m_asr));
 }
 
 void CRubyScript::EnterScript()
@@ -179,9 +204,20 @@ HRESULT STDMETHODCALLTYPE CRubyScript::SetScriptState(
 	m_state = ss;
 	if (ss != SCRIPTSTATE_UNINITIALIZED)
 	{
-	    GET_POINTER(IActiveScriptSite, m_pSite)
-	    pIActiveScriptSite->OnStateChange(ss);
-	    RELEASE_POINTER(IActiveScriptSite)
+            if (m_pSite.IsOK())
+            {
+	        GET_POINTER(IActiveScriptSite, m_pSite)
+                if (pIActiveScriptSite)
+                {
+	            pIActiveScriptSite->OnStateChange(ss);
+                    RELEASE_POINTER(IActiveScriptSite)
+                }
+                else
+                {
+                    m_pSite.Unglobalize();
+                    ATLTRACE(_T("no scriptsite in SetScriptState %d\n"), ss);
+                }
+            }
 	}
 	return S_OK;
     }
@@ -218,8 +254,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddNamedItem(
     if (dwFlags & SCRIPTITEM_GLOBALMEMBERS)
         m_strGlobalObjectName = pstrName;
 
-    LPOLESTR p = wcscpy(new OLECHAR[wcslen(pstrName) + 1], pstrName);
-    ItemMapIter it = m_mapItem.find(p);
+    ItemMapIter it = m_mapItem.find(pstrName);
     if (it != m_mapItem.end())
     {
         EnterScript();
@@ -233,7 +268,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddNamedItem(
         }
         LeaveScript();
     }
-    m_mapItem.insert(ItemMap::value_type(p, new CItemDisp(dwFlags)));
+    m_mapItem.insert(ItemMap::value_type(pstrName, new CItemDisp(dwFlags)));
     if (m_state == SCRIPTSTATE_STARTED || m_state == SCRIPTSTATE_CONNECTED)
     {
         AddNamedItemToScript(pstrName, dwFlags);
@@ -318,7 +353,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::GetScriptDispatch(
     ATLTRACE(_T("GetScriptDispatch for %ls\n"), (pstrItemName) ? pstrItemName : L"GLOBALNAMESPACE");
     if (!pstrItemName || m_strGlobalObjectName == pstrItemName)
     {
-        *ppdisp = CreateDispatch();
+        *ppdisp = CreateGlobalDispatch();
         return S_OK;
     }
 
@@ -481,36 +516,54 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddScriptlet(
         m_listScriptlets.push_back(CScriptlet(pstrCode, pstrItemName, pstrSubItemName, pstrEventName, ulStartingLineNumber));
         return S_OK;
     }
+    ATLTRACE(_T("AddScriptLet default=%ls, item=%ls, subitem=%ls, event=%ls\n"), (pstrDefaultName) ? pstrDefaultName : L"(null)", pstrItemName, pstrSubItemName, pstrEventName);
     if (pstrItemName && pstrEventName && pstrCode)
     {
+        USES_CONVERSION;
 	HRESULT hr = E_UNEXPECTED;
-	ItemMapIter it = m_mapItem.find(pstrItemName);
+        volatile VALUE vname = rb_str_new_cstr(W2A((!pstrSubItemName || wcslen(pstrSubItemName) == 0) ? pstrItemName : pstrSubItemName));
+        volatile VALUE eventname = rb_str_new_cstr(W2A(pstrEventName));
+        size_t len = wcslen(pstrCode);
+        LPSTR pScript = new char[len * 2 + 1];
+        size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, pScript, (int)len * 2 + 1, NULL, NULL);
+        volatile VALUE vscript = rb_str_new(pScript, m);
+        volatile VALUE handler = rb_funcall(m_asr, rb_intern("create_event_handler"), 4, vname, eventname, vscript, LONG2FIX(ulStartingLineNumber));
+        VALUE methodid = rb_funcall(handler, rb_intern("get_method_id"), 1, eventname);
+        delete[] pScript;
+
+        ItemMapIter it = m_mapItem.end();
+
+        if (pstrSubItemName)
+        {
+    	    it = m_mapItem.find(pstrSubItemName);
+            if (it == m_mapItem.end())
+            {
+                AddNamedItem(pstrSubItemName, SCRIPTTEXT_ISVISIBLE | SCRIPTITEM_ISSOURCE);
+                it = m_mapItem.find(pstrSubItemName);
+                GET_POINTER(IActiveScriptSite, m_pSite)
+                CreateEventSource(pIActiveScriptSite, *it, (m_dwThreadID == GetCurrentThreadId()));
+                RELEASE_POINTER(IActiveScriptSite)
+            }
+        }
+        else
+        {
+	    it = m_mapItem.find(pstrItemName);
+        }
 	if (it != m_mapItem.end())
 	{
 	    EventMapIter itev = m_mapEvent.end();
-            GET_POINTER(IActiveScriptSite, m_pSite)
-	    IDispatch* pDisp = (*it).second->GetDispatch(pIActiveScriptSite, const_cast<LPOLESTR>(pstrItemName), (m_dwThreadID == GetCurrentThreadId()));
-            RELEASE_POINTER(IActiveScriptSite)
 	    if (pstrSubItemName)
 	    {
 		itev = m_mapEvent.find(pstrSubItemName);
-		if (itev == m_mapEvent.end())
-		{
-		    itev = (m_mapEvent.insert(EventMap::value_type(pstrSubItemName, new CEventSink(this)))).first;
-		}
-		(*itev).second->AddRef();
-		hr = (*itev).second->Advise(pDisp, const_cast<LPOLESTR>(pstrSubItemName));
 	    }
 	    else
 	    {
 		itev = m_mapEvent.find(pstrItemName);
 	    }
-	    if (pDisp)
-		pDisp->Release();
 
 	    if (itev != m_mapEvent.end())
 	    {
-		hr = (*itev).second->ResolveEvent(pstrEventName, ulStartingLineNumber, pstrCode);
+		hr = (*itev).second->ResolveEvent(pstrEventName, handler, methodid);
 	    }
 	    if (hr == S_OK)
 	    {
@@ -521,23 +574,15 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddScriptlet(
 		USES_CONVERSION;
 
 		CComBSTR bstr(pstrSubItemName);
-		bstr += L"_";
+		bstr += L".";
 		bstr += pstrEventName;
 		*pbstrName = bstr.Copy();
-                volatile VALUE mname = rb_str_new_cstr(W2A(bstr.m_str));
-		size_t len = wcslen(pstrCode);
-		LPSTR pScript = new char[len * 2 + 1];
-		size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, pScript, (int)len * 2 + 1, NULL, NULL);
-                volatile VALUE vscript = rb_str_new(pScript, m);
-                rb_funcall(m_asr, rb_intern("add_method"), 4, mname, vscript, mname, LONG2FIX(ulStartingLineNumber));
-		delete[] pScript;
+                hr = S_OK;
 	    }
 	}
 	return hr;
     }
     return E_INVALIDARG;
-
-    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE CRubyScript::ParseScriptText( 
@@ -597,7 +642,6 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseScriptText(
     return hr;
 }
 
-#if defined(IMPLEMENTS_IACTIVESCRIPTPARSE)
 // IActiveScriptParseProcedure64
 HRESULT STDMETHODCALLTYPE CRubyScript::ParseProcedureText( 
 #if defined(_WIN64)
@@ -643,7 +687,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseProcedureText(
     size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, psz + n, (int)len * 2 + 1, NULL, NULL);
     strcpy(psz + n + m, "\r\n}");
 
-    HRESULT hr = ParseText(ulStartingLineNumber, psz, pstrItemName, &excep, &v, dwFlags);
+//    HRESULT hr = ParseText(ulStartingLineNumber, psz, pstrItemName, &excep, &v, dwFlags);
     if (v.vt == VT_DISPATCH)
     {
         *ppdisp = v.pdispVal;
@@ -655,7 +699,19 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseProcedureText(
     delete[] psz;
     return S_OK;
 }
-#endif // #if defined(IMPLEMENTS_IACTIVESCRIPTPARSE)
+
+HRESULT CRubyScript::CollectGarbage(SCRIPTGCTYPE scriptgctype)
+{
+    if (scriptgctype == SCRIPTGCTYPE_EXHAUSTIVE)
+    {
+        rb_gc_start();
+    }
+    else
+    {
+        rb_gc_start();
+    }
+    return S_OK;
+}
 
 HRESULT CRubyScript::Connect()
 {
@@ -672,24 +728,28 @@ HRESULT CRubyScript::Connect()
 
 	if ((*it).second->IsSource())
 	{
-
-	    IDispatch* pDisp = (*it).second->GetDispatch(pIActiveScriptSite, const_cast<LPOLESTR>((*it).first.c_str()), fSameApt);
-	    if (pDisp)
-	    {
-		EventMapIter itev = m_mapEvent.find((*it).first.c_str());
-		if (itev == m_mapEvent.end())
-		{
-		    itev = (m_mapEvent.insert(EventMap::value_type((*it).first, new CEventSink(this)))).first;
-		}
-		(*itev).second->AddRef();
-		(*itev).second->Advise(pDisp);
-		pDisp->Release();
-	    }
+            CreateEventSource(pIActiveScriptSite, *it, fSameApt);
 	}
     }
     HRESULT hr = pIActiveScriptSite->OnStateChange(SCRIPTSTATE_CONNECTED);
     RELEASE_POINTER(IActiveScriptSite)
     return hr;
+}
+
+void CRubyScript::CreateEventSource(IActiveScriptSite* pSite, ItemMap::value_type& val, bool fSameApt)
+{
+    IDispatch* pDisp = val.second->GetDispatch(pSite, const_cast<LPOLESTR>(val.first.c_str()), fSameApt);
+    if (pDisp)
+    {
+	EventMapIter itev = m_mapEvent.find(val.first.c_str());
+	if (itev == m_mapEvent.end())
+	{
+	    itev = (m_mapEvent.insert(EventMap::value_type(val.first, new CEventSink(this)))).first;
+	}
+	(*itev).second->AddRef();
+	(*itev).second->Advise(pDisp);
+	pDisp->Release();
+    }
 }
 
 void CRubyScript::ConnectToEvents()
@@ -713,7 +773,10 @@ void CRubyScript::Disconnect(bool fSinkOnly)
     m_mapEvent.clear();
     if (fSinkOnly) return;	// return If triggered by SetScriptState -> DISCONNECTED
 
-    rb_funcall(m_asr, rb_intern("remove_items"), 0);
+    if (m_asr != Qnil)
+    {
+        rb_funcall(m_asr, rb_intern("remove_items"), 0);
+    }
     for (ItemMapIter it = m_mapItem.begin(); it != m_mapItem.end(); it++)
     {
         if ((*it).second)
