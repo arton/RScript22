@@ -10,6 +10,7 @@ module ActiveScriptRuby
 
   class AsrProxy
     USER_DISPID = 28000
+    alias :include :extend
     def initialize(obj)
       @target = obj
       @dispid = { }
@@ -93,6 +94,23 @@ module ActiveScriptRuby
       end
       obj.add_method(procname, code, '(asr)', line)
       obj
+    end
+    
+    def create_event_proc(itemname, code, line)
+      val = @named_items[itemname] 
+      unless val
+        obj = SelfProxy.new
+        add_named_item(itemname, obj, false)
+      else
+        if val.global
+          obj = self
+        else
+          obj = val.obj
+        end
+      end
+      Proc.new do
+        obj.instance_eval(code, '(asr)', line)
+      end
     end
     
     def method_missing(id, *args)

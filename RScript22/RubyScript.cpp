@@ -678,25 +678,15 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseProcedureText(
     memset(&excep, 0, sizeof(EXCEPINFO));
 
     USES_CONVERSION;
-    LPCSTR ProcName = (pstrProcedureName) ? W2A(pstrProcedureName) : "undef";
-    LPCSTR ItemName = (pstrItemName) ? W2A(pstrItemName) : "unkole";
-
+    LPCSTR iname = (pstrItemName) ? W2A(pstrItemName) : W2A(m_strGlobalObjectName.c_str());
     size_t len = wcslen(pstrCode);
-    LPSTR psz = new char[len * 2 + strlen(ProcName) + strlen(ItemName) + 32];
-    int n = sprintf(psz, "@%s_%s%d = Proc.new {\r\n ", ItemName, ProcName, seqcnt++);
-    size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, psz + n, (int)len * 2 + 1, NULL, NULL);
-    strcpy(psz + n + m, "\r\n}");
-
-//    HRESULT hr = ParseText(ulStartingLineNumber, psz, pstrItemName, &excep, &v, dwFlags);
-    if (v.vt == VT_DISPATCH)
-    {
-        *ppdisp = v.pdispVal;
-    }
-    else
-    {
-        VariantClear(&v);
-    }
+    LPSTR psz = new char[len * 2 + 1];
+    size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, psz, (int)len * 2 + 1, NULL, NULL);
+    volatile VALUE vscript = rb_str_new(psz, m);
+    volatile VALUE vname = rb_str_new_cstr(iname);
+    volatile VALUE handler = rb_funcall(m_asr, rb_intern("create_event_proc"), 3, vname, vscript, LONG2FIX(ulStartingLineNumber));
     delete[] psz;
+    *ppdisp = CreateDispatch(handler);
     return S_OK;
 }
 

@@ -38,7 +38,7 @@ class ATL_NO_VTABLE CRubyScript :
     public IActiveScript,
     public IActiveScriptParse,
     public IActiveScriptGarbageCollector,
-//    public IActiveScriptParseProcedure,
+    public IActiveScriptParseProcedure,
     public IServiceProvider
 {
 public:
@@ -51,7 +51,7 @@ BEGIN_COM_MAP(CRubyScript)
     COM_INTERFACE_ENTRY(IActiveScriptParse)
     COM_INTERFACE_ENTRY(IActiveScript)
     COM_INTERFACE_ENTRY(IActiveScriptGarbageCollector)
-//    COM_INTERFACE_ENTRY(IActiveScriptParseProcedure)
+    COM_INTERFACE_ENTRY(IActiveScriptParseProcedure)
     COM_INTERFACE_ENTRY(IServiceProvider)
     COM_INTERFACE_ENTRY_AGGREGATE(IID_IMarshal, m_pUnkMarshaler.p)
 END_COM_MAP()
