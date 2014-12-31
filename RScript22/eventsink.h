@@ -10,23 +10,12 @@
 #ifndef EVENTSINK_HEADER
 #define EVENTSINK_HEADER
 
-class CEventCode
-{
-public:
-	CEventCode(){};
-	CEventCode(int, LPCOLESTR);
-	CEventCode(const CEventCode&);
-	inline std::string& GetCode() { return m_strCode; }
-	inline int GetStartLine() const { return m_nStartLine; }
-private:
-	int m_nStartLine;
-	std::string m_strCode;
-};
+#include "ScriptObject.h"
 
 typedef std::map<std::wstring, DISPID> DispMap;
 typedef std::map<std::wstring, DISPID>::iterator DispMapIter;
-typedef std::map<DISPID, CEventCode> IvkMap;
-typedef std::map<DISPID, CEventCode>::iterator IvkMapIter;
+typedef std::map<DISPID, DISPID> IvkMap;
+typedef std::map<DISPID, DISPID>::iterator IvkMapIter;
 
 class CEventSink : public IDispatchEx
 {
@@ -36,7 +25,7 @@ public:
 	HRESULT Advise(IDispatch*);
 	HRESULT Advise(IDispatch*, LPOLESTR);
 	HRESULT Unadvise();
-	HRESULT ResolveEvent(LPCOLESTR pstrEventName, int nLineStart, LPCOLESTR pstrCode);
+	HRESULT ResolveEvent(LPCOLESTR pstrEventName, VALUE handler, VALUE methodid);
 
 	STDMETHOD(QueryInterface)(REFIID iid, void ** ppvObject)
 	{
@@ -145,14 +134,13 @@ public:
 		ATLTRACENOTIMPL(_T("GetNameSpaceParent"));
 	}
 
-	inline void DisconnectDispatch() { m_pDisp = NULL; }
 private:
 	HRESULT GetEventNames(IID&, ITypeInfo*);
 	IID m_iidEvent;
 	DispMap m_mapDisp;
 	IvkMap m_mapIvk;
-	IvkMapIter m_mapCurrentCmd;
 	CRubyScript* m_pEngine;
+        CScriptObject* m_pHandler;
 	IDispatch* m_pDisp;
 	DWORD m_dwCookie;
 	bool m_fDone;

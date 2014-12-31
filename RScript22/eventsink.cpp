@@ -10,30 +10,21 @@
 #include "RubyScript.h"
 #include "eventsink.h"
 
-CEventCode::CEventCode(int n, LPCOLESTR s) :
-    m_nStartLine(n)
-{
-    USES_CONVERSION;
-    m_strCode = W2A(s);
-}
-
-CEventCode::CEventCode(const CEventCode& c) :
-    m_nStartLine(c.m_nStartLine), m_strCode(c.m_strCode)
-{
-}
-
 CEventSink::CEventSink(CRubyScript* pEngine)
-    : m_fDone(false), m_pEngine(pEngine), m_pDisp(NULL), m_lRefCount(0)
+    : m_fDone(false), m_pEngine(pEngine), m_pHandler(NULL), m_pDisp(NULL), m_lRefCount(0)
 {
 }
 
 CEventSink::~CEventSink()
 {
+    if (m_pHandler)
+    {
+        delete m_pHandler;
+    }
     if (m_pDisp)
     {
         Unadvise();
         m_pDisp->Release();
-        m_pDisp = NULL;
     }
 }
 
@@ -41,8 +32,6 @@ HRESULT CEventSink::Advise(IDispatch* pDisp)
 {
     if (m_fDone) return S_OK;
 
-    m_pDisp = pDisp;
-    pDisp->AddRef();
     IProvideClassInfo2* pPCI;
     HRESULT hr = pDisp->QueryInterface(IID_IProvideClassInfo2, (void**)&pPCI);
     if (hr == S_OK)
@@ -75,6 +64,8 @@ HRESULT CEventSink::Advise(IDispatch* pDisp)
     }
     if (hr == S_OK)
     {
+        m_pDisp = pDisp;
+        pDisp->AddRef();
 	m_fDone = true;
     }
     return hr;
@@ -153,6 +144,9 @@ HRESULT CEventSink::Advise(IDispatch* pDisp, LPOLESTR pstrName)
 	hr = Advise(vResult.pdispVal);
 	VariantClear(&vResult);
     }
+    else
+    {
+    }
     return hr;
 }
 
@@ -175,12 +169,18 @@ HRESULT CEventSink::Unadvise()
     return hr;
 }
 
-HRESULT CEventSink::ResolveEvent(LPCOLESTR pstrEventName, int nLineStart, LPCOLESTR pstrCode)
+HRESULT CEventSink::ResolveEvent(LPCOLESTR pstrEventName, VALUE handler, VALUE methodid)
 {
     DispMapIter it = m_mapDisp.find(pstrEventName);
-    if (it == m_mapDisp.end()) return E_UNEXPECTED;
-
-    m_mapIvk[(*it).second] = CEventCode(nLineStart, pstrCode);
+    if (it == m_mapDisp.end()) 
+    {
+        it = m_mapDisp.insert(DispMap::value_type(pstrEventName, NUM2INT(methodid))).first;
+    }
+    m_mapIvk[(*it).second] = NUM2INT(methodid);
+    if (!m_pHandler)
+    {
+        m_pHandler = new CScriptObject(handler, m_pEngine->CreateDispatch(handler));
+    }
     return S_OK;
 }
 
@@ -220,16 +220,11 @@ STDMETHODIMP CEventSink::Invoke(
     VARIANTARG* pArg = pDispParams->rgvarg;
     IvkMapIter it = m_mapIvk.find(dispIdMember);
     if (it == m_mapIvk.end()) return DISP_E_MEMBERNOTFOUND;
+    if (!m_pHandler) return E_UNEXPECTED;
 
-    std::string& str = (*it).second.GetCode();
-    CRubyScript* pEngine = m_pEngine;
     m_pEngine->EnterScript();
-    HRESULT hr = m_pEngine->EvalString((*it).second.GetStartLine(), str.length(), str.c_str(), pVarResult, pExcepInfo);
-    if (pEngine == m_pEngine)
-    {
-	// If Engine was destroyed for some reason, this pointer makes access violation.
-	m_pEngine->LeaveScript();
-    }
+    HRESULT hr = m_pHandler->Invoke((*it).second, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
+    m_pEngine->LeaveScript();
     return hr;
 }
 
@@ -250,11 +245,7 @@ HRESULT STDMETHODCALLTYPE CEventSink::InvokeEx(
     /* [out] */ EXCEPINFO __RPC_FAR *pei,
     /* [unique][in] */ IServiceProvider __RPC_FAR *pspCaller)
 {
-//    if (pspCaller)
-//	m_pEngine->PushServiceProvider(pspCaller);
     HRESULT hr = Invoke(id, IID_NULL, lcid, wFlags, pdp, pvarRes, pei, NULL);
-//    if (pspCaller)
-//	m_pEngine->PopServiceProvider();
     return hr;
 }
 
