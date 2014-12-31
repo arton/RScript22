@@ -58,6 +58,7 @@ module ActiveScriptRuby
       super(self)
       @bridge = bridge
       @named_items = {}
+      @global = nil
     end
 
     def to_variant(obj)
@@ -94,10 +95,15 @@ module ActiveScriptRuby
       obj
     end
     
+    def method_missing(id, *args)
+      @global.__send__(id, *args) if @global
+    end
+    
     def add_named_item(name, obj, global)
       @named_items[name] = NamedItem.new(obj, global)
       define_singleton_method(name.to_sym) { obj }
       if global
+        @global = obj
         # ASR 1.0 compatibility
         instance_eval("#{name.capitalize} = #{name}; @#{name} = #{name}")
       end
