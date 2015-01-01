@@ -1,0 +1,175 @@
+<html>
+<head>
+<title>HTA OLE Viewer</title>
+<!--
+ The original sciprt is written by M. Suketa for vruby as soleb.rb
+ -->
+
+<script language="RubyScript.2.2">
+class OLEINFO
+  @members = []
+  def typelibs
+    WIN32OLE_TYPE.typelibs.select{|t|
+      t.size > 0
+    }.sort
+  end
+
+  def ole_classes(tlib)
+    WIN32OLE_TYPE.ole_classes(tlib).collect {|t|
+      t.name
+    }.sort
+  end
+
+  def ole_members(tlib, klass)
+    @members = []
+    k = WIN32OLE_TYPE.ole_classes(tlib).find {|t|
+      t.name == klass
+    }
+    return [] if !k
+    @members = (k.ole_methods + k.variables).sort{|m1, m2|
+      m1.name <=> m2.name
+    }
+  end
+
+  def ole_class_info(tlib, klass)
+    k = WIN32OLE_TYPE.ole_classes(tlib).find {|t|
+      t.name == klass
+    }
+    return "" if !k
+    "#{k.ole_type}  #{k.name}\r\n" +
+    "  GUID : #{k.guid}\r\n" +
+    "  PROGID : #{k.progid}\r\n" +
+    "  DESCRIPTION : #{k.helpstring}\r\n\r\n"
+  end
+
+  def method_info(m)
+    info = ""
+    info += "Event " if m.event?
+    info += m.invoke_kind 
+    info += " "
+    info += m.return_type
+    info += " "
+    info += m.name
+    info += "\r\n"
+    info += "  Dispatch ID : #{m.dispid}\r\n"
+    info += "  DESCRIPTION : #{m.helpstring}\r\n" 
+        m.params.each_with_index do |param, i|
+      pinfos = []
+      pinfos.push "IN" if param.input?
+      pinfos.push "OUT" if param.output?
+      pinfos.push "OPTION" if param.optional?
+      pinfo = "arg#{i+1} - #{param.ole_type} #{param.name} [#{pinfos.join(',')}]"
+      pinfo += " = #{param.default}" if param.default
+      info += "  #{pinfo}\r\n"
+    end
+    info += "\r\n"
+    info += "  Event Interface : #{m.event_interface}\r\n" if m.event?
+    info
+  end
+
+  def variable_info(m)
+    info = "\r\n  #{m.variable_kind} #{m.ole_type} #{m.name}"
+    info += " = #{m.value}" if m.value
+    info
+  end
+
+  def ole_member_info(tlib, klass, member)  
+    k = WIN32OLE_TYPE.ole_classes(tlib).find {|t|
+      t.name == klass
+    }
+    return "" if !k
+    m = @members.find do |mm|
+      mm.name == member
+    end
+    return "" if !m
+    if m.kind_of?(WIN32OLE_METHOD)
+      return method_info(m)
+    else
+      return variable_info(m)
+    end
+  end
+end
+
+def change_sel(e, active)
+  e.style.backgroundColor = active ? 'blue': 'white'
+  e.style.color = active ? 'white' : 'black'
+end
+
+def sel_changed(div)
+  elem = Window.event.srcElement
+  return div if elem.children.length > 1
+  return nil if elem.innerHTML.strip.empty?
+  if div
+    change_sel(div, false)
+  end
+  change_sel(elem, true)
+  elem
+end
+
+def clear_text(id)
+  Window.document.getElementById(id).innerHTML = ''
+end
+
+def tlib_sel_changed
+  return unless @current_typelib = sel_changed(@current_typelib)
+  begin
+    Window.document.getElementById('classinfo').innerHTML =
+        make_list(@oleinfo.ole_classes(@current_typelib.innerHTML))
+    clear_text('info')
+  rescue => e
+    clear_text('classinfo')
+    clear_text('memberinfo')
+    Window.document.getElementById('info').innerHTML = e.message
+  end
+  @current_member = @current_class = nil
+end
+
+def class_sel_changed
+  return unless @current_class = sel_changed(@current_class)
+  Window.document.getElementById('memberinfo').innerHTML = 
+      make_list(@oleinfo.ole_members(@current_typelib.innerHTML, @current_class.innerHTML))
+  Window.document.getElementById('info').innerHTML = 
+      @oleinfo.ole_class_info(@current_typelib.innerHTML, @current_class.innerHTML)
+  @current_member = nil
+end
+
+def member_sel_changed
+  return unless @current_member = sel_changed(@current_member)
+  Window.document.getElementById('info').innerHTML = 
+      make_list([@oleinfo.ole_class_info(@current_typelib.innerHTML, @current_class.innerHTML),
+                 @oleinfo.ole_member_info(@current_typelib.innerHTML, @current_class.innerHTML,
+                                         @current_member.innerHTML).gsub("\r\n", "<br />")])
+end
+
+def make_list(a)
+  '<div>' + a.join('</div><div>') + '</div>'
+end
+
+def init_info
+  ri = WIN32OLE.new('ruby.object.2.2')
+  Window.document.getElementById('footer').innerHTML = "powerd by #{RUBY_VERSION}-p#{RUBY_PATCHLEVEL} [#{RUBY_PLATFORM}]"
+  @oleinfo = OLEINFO.new
+  @current_typelib = nil
+  Window.document.getElementById('tlibinfo').innerHTML = make_list(@oleinfo.typelibs)
+end
+</script>
+</head>
+
+<body onload="init_info()">
+<div id="tlibinfo" onclick="tlib_sel_changed()"
+     style="height: 30%; max-height: 300px; border-style: inset; overflow: scroll">
+</div>
+<div style = "height: 30%">
+  <div id="classinfo" onclick="class_sel_changed()"
+     style="height: 100%; float: left; width: 45%; border-style: inset; overflow: scroll">
+  </div>
+  <div id="memberinfo" onclick="member_sel_changed()"
+     style="height: 100%; border-style: inset; overflow: scroll">
+  </div>
+</div>
+<div id="info" style="height: 30%; border-style: inset; overflow: scroll">
+</div>
+<hr/>
+<div id="footer" style="margin-left: 70%"></div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<html>
+<head>
+<title>biorhythm</title>
+<!--
+ This page demonstates RubyScript in Internet Explorer
+ 
+ The original sciprt is
+#!/usr/local/bin/ruby
+#
+#               biorhythm.rb -
+#                       $Release Version: $
+#                       $Revision: 1.9 $
+#                       $Date: 2003/05/05 14:02:14 $
+#                       by Yasuo OHBA(STAFS Development Room)#
+# --
+#
+#       
+#
+# probably based on:
+#
+# Newsgroups: comp.sources.misc,de.comp.sources.os9
+# From: fkk@stasys.sta.sub.org (Frank Kaefer)
+# Subject: v41i126:  br - Biorhythm v3.0, Part01/01
+# Message-ID: <1994Feb1.070616.15982@sparky.sterling.com>
+# Sender: kent@sparky.sterling.com (Kent Landfield)
+# Organization: Sterling Software
+# Date: Tue, 1 Feb 1994 07:06:16 GMT
+#
+# Posting-number: Volume 41, Issue 126
+# Archive-name: br/part01
+# Environment: basic, dos, os9
+-->
+<script language="RubyScript">
+include Math
+require "date"
+def printHeader(doc, y, m, d, p, w)
+  doc.write "--- Biorhythm ---<br>"
+  doc.write sprintf("The birthday %04d.%02d.%02d is a %s<br>", y, m, d, w)
+  doc.write sprintf("Age in days: [%d]<br><br>", p)
+end
+
+def getPosition(z)
+  pi = Math::PI
+  z = Integer(z)
+  phys = (50.0 * (1.0 + Math::sin((z / 23.0 - (z / 23)) * 360.0 * pi / 180.0))).to_i
+  emot = (50.0 * (1.0 + Math::sin((z / 28.0 - (z / 28)) * 360.0 * pi / 180.0))).to_i
+  geist =(50.0 * (1.0 + Math::sin((z / 33.0 - (z / 33)) * 360.0 * pi / 180.0))).to_i
+  return phys, emot, geist
+end
+
+def name_of_week(date)
+  Date::DAYNAMES[date.wday]
+end
+#
+# main program
+#
+def main()
+    begin
+        bd = Date.parse("#{@window.bday.value[0..3]}-#{@window.bday.value[4..5]}-#{@window.bday.value[6..7]}")
+    rescue
+        @window.alert "BAD Input Birthday !!"
+        return nil
+    end
+    dd = Date.today
+    display_period = 9
+    @doc.open "text/html", "replace"
+    @doc.write "<center><span style=\"font-family: 'Courier'\">"
+    printHeader(@doc, bd.year, bd.month, bd.day, dd - bd, name_of_week(bd))
+    @doc.write "                     P=physical, E=emotional, M=mental<br>"
+    @doc.write "             -------------------------+-------------------------<br>"
+    @doc.write "                     Bad Condition    |    Good Condition<br>"
+    @doc.write "             -------------------------+-------------------------<br>"
+  (dd - bd).step(dd - bd + display_period) do |z|
+	phys, emot, geist = getPosition(z)
+        @doc.write sprintf("%04d.%02d.%02d : <br>", dd.year, dd.month, dd.day)
+        p = (phys / 2.0 + 0.5).to_i
+        e = (emot / 2.0 + 0.5).to_i
+        g = (geist / 2.0 + 0.5).to_i
+        graph = "." * 51
+        graph[25] = ?|
+        graph[p], graph[e], graph[g] = ?P, ?E, ?M
+        @doc.write graph + "<br>"
+        dd = dd + 1
+    end
+    @doc.write "             -------------------------+-------------------------<br>"
+    @doc.write "</span></center>"  
+    @doc.close
+end
+
+def clear_input()
+    @window.bday.value = ""
+end
+
+def initvar()
+  @doc = @window.frm.document
+  @window.document.getElementById("version").innerHTML = "#{RUBY_VERSION} (#{RUBY_PLATFORM})"
+end
+</script>
+
+</head>
+
+<body onload="initvar()" language="RubyScript">
+birthday(YYYYMMDD): <input type="text" id="bday" name="bday">
+&nbsp;
+<input type="button" value="GO!" id="start" name="start" onclick="main" language="RubyScript">
+&nbsp;
+<input type="button" value="clear" id=clear name=clear onclick='@window.bday.value = ""' language="RubyScript">
+<br>
+<iframe name="frm" width="100%" height="80%">
+</iframe>
+<center><input type="button" value="quit" id="qt" onclick="@window.close" language="RubyScript"></center>
+<hr>
+<span style="margin-left: 80%">Ruby <span id="version"/></span>
+</body>
+</html>
