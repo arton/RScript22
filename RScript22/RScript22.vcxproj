@@ -120,7 +120,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>RUBY_2_2;_ATL_STATIC_REGISTRY;WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(HOMEDRIVE)$(HOMEPATH)\include\ruby-2.2.0;$(HOMEDRIVE)$(HOMEPATH)\include\ruby-2.2.0\x64-mswin64_100</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(HOMEDRIVE)$(HOMEPATH)\64\include\ruby-2.2.0;$(HOMEDRIVE)$(HOMEPATH)\64\include\ruby-2.2.0\x64-mswin64_100</AdditionalIncludeDirectories>
     </ClCompile>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -143,8 +143,8 @@
       <ModuleDefinitionFile>.\RScript22.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <RegisterOutput>true</RegisterOutput>
-      <AdditionalLibraryDirectories>$(HOMEDRIVE)$(HOMEPATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>x64-msvcr100-ruby210.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(HOMEDRIVE)$(HOMEPATH)\64\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>x64-msvcr100-ruby220.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -190,7 +190,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <PreprocessorDefinitions>RUBY_2_2;_ATL_STATIC_REGISTRY;WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(HOMEDRIVE)$(HOMEPATH)\include\ruby-2.2.0;$(HOMEDRIVE)$(HOMEPATH)\include\ruby-2.2.0\x64-mswin64_100</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(HOMEDRIVE)$(HOMEPATH)\64\include\ruby-2.2.0;$(HOMEDRIVE)$(HOMEPATH)\64\include\ruby-2.2.0\x64-mswin64_100</AdditionalIncludeDirectories>
     </ClCompile>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -215,8 +215,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <RegisterOutput>true</RegisterOutput>
-      <AdditionalLibraryDirectories>$(HOMEDRIVE)$(HOMEPATH)\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>x64-msvcr100-ruby210.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(HOMEDRIVE)$(HOMEPATH)\64\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>x64-msvcr100-ruby220.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
