@@ -146,7 +146,6 @@ def make_list(a)
 end
 
 def init_info
-  ri = WIN32OLE.new('ruby.object.2.2')
   Window.document.getElementById('footer').innerHTML = "powerd by #{RUBY_VERSION}-p#{RUBY_PATCHLEVEL} [#{RUBY_PLATFORM}]"
   @oleinfo = OLEINFO.new
   @current_typelib = nil
