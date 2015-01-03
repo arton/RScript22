@@ -4,6 +4,7 @@
 class CScriptObject : public IDispatchEx
 {
 public:
+    // pobjdispatch should be AddRefed
     CScriptObject(VALUE v, IDispatch* pobjdispatch, IDispatch* pdisp = NULL) :
         m_object(v),
         m_objectDispatch(pobjdispatch),
@@ -12,6 +13,10 @@ public:
         m_cDispIds(0),
         m_sizeDispIds(16)
     {
+        if (!IMMEDIATE_P(v))
+        {
+            rb_gc_register_address(&v);
+        }
         m_DispIds = new DISPID[m_sizeDispIds];
     }
 
@@ -21,6 +26,10 @@ public:
         if (m_pDispatch)
         {
             m_pDispatch->Release();
+        }
+        if (!IMMEDIATE_P(m_object))
+        {
+            rb_gc_unregister_address(&m_object);
         }
         delete[] m_DispIds;
     }
