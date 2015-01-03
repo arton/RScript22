@@ -63,6 +63,7 @@ END_COM_MAP()
         VariantCopy(m_pPassedObject, &v);
     }
 
+    IDispatch* CreateDispatch(VALUE);
 // ISupportsErrorInfo
     STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid);
 
@@ -87,7 +88,6 @@ private:
     VALUE m_asr;
     IDispatch* m_pAsr;
     VARIANT* m_pPassedObject;
-    DISPID m_dispidRubyize;
 };
 
 #endif //__RUBYIZE_H_

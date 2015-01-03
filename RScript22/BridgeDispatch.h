@@ -19,6 +19,7 @@ class CObjectStore
 {
 public:
     virtual void SetPassedObject(VARIANT&) = 0;
+    virtual IDispatch* CreateDispatch(VALUE) = 0;
 };
 
 class CBridgeDispatch : public IDispatch 

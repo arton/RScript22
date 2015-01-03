@@ -186,7 +186,7 @@ HRESULT CEventSink::ResolveEvent(LPCOLESTR pstrEventName, VALUE handler, VALUE m
     m_mapIvk[(*it).second] = NUM2INT(methodid);
     if (!m_pHandler)
     {
-        m_pHandler = new CScriptObject(handler, m_pEngine->CreateDispatch(handler));
+        m_pHandler = new CScriptObject(m_pEngine, handler, m_pEngine->CreateDispatch(handler));
     }
     return S_OK;
 }

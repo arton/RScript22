@@ -88,12 +88,6 @@ module ActiveScriptRuby
       obj
     end
 
-    def rubyize(variant)
-      obj = AsrProxy.new(variant.value)
-      @bridge.PassObject(obj)
-      obj
-    end
-
     def ruby_version
       "#{RUBY_VERSION}-p#{RUBY_PATCHLEVEL} (#{RUBY_PLATFORM})"
     end

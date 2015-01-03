@@ -50,6 +50,13 @@ VALUE CRubyScript::CreateVariant(VARIANT& var)
     return val;
 }
 
+void CRubyScript::CreateVariant(VALUE v, VARIANT* pvar)
+{
+    VALUE var = rb_class_new_instance(1, &v, s_win32ole_variant);
+    OLE_VARIANT_DATA* pvariant = reinterpret_cast<OLE_VARIANT_DATA*>(DATA_PTR(var));
+    VariantCopy(pvar, &pvariant->var);
+}
+
 IDispatch* CRubyScript::CreateDispatch(VALUE obj)
 {
     VARIANT v;
@@ -77,12 +84,7 @@ IDispatch* CRubyScript::CreateGlobalDispatch()
     {
         pglobal = (*it).second->GetDispatch();
     }
-    VARIANT v;
-    VariantInit(&v);
-    m_pPassedObject = &v;
-    rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
-    IDispatch* pdisp = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
-    return new CScriptObject(m_asr, pdisp, pglobal);
+    return new CScriptObject(this, m_asr, CreateDispatch(m_asr), pglobal);
 }
 
 void CRubyScript::CreateActiveScriptRuby()
@@ -113,6 +115,8 @@ VALUE CRubyScript::s_asrModule(Qnil);
 VALUE CRubyScript::s_asrClass(Qnil);
 VALUE CRubyScript::s_asrProxy(Qnil);
 
+__declspec( thread ) bool s_threadInitialized = false;
+
 CRubyScript::CRubyScript()
     : m_state(SCRIPTSTATE_UNINITIALIZED),
       m_threadState(SCRIPTTHREADSTATE_NOTINSCRIPT),
@@ -122,9 +126,11 @@ CRubyScript::CRubyScript()
       m_nStartLinePersistent(0),
       m_pPassedObject(NULL)
 {
+    ATLTRACE(_T("CRubyScript on thread:%d\n"), GetCurrentThreadId());
     if (!bRubyInitialized)
     {
         bRubyInitialized = true;
+        s_threadInitialized = true;
         int dummyargc(1);
         char* dummyargv[] = {"dummy", NULL };
         char** pargv;
@@ -138,8 +144,14 @@ CRubyScript::CRubyScript()
         s_win32ole = rb_const_get(rb_cObject, rb_intern("WIN32OLE"));
         s_win32ole_variant = rb_const_get(rb_cObject, rb_intern("WIN32OLE_VARIANT"));
     }
+    else if (!s_threadInitialized)
+    {
+        s_threadInitialized = true;
+        rb_thread_create(NULL, NULL);
+    }
     _ASSERT(!NIL_P(s_win32ole));
     _ASSERT(!NIL_P(s_asrClass));
+    ATLTRACE(_T("asrClass:%08X\n"), s_asrClass);
 }
 
 void CRubyScript::EnterScript()

@@ -57,6 +57,7 @@ class ATL_NO_VTABLE CRubyScript :
     public CObjectStore
 {
     friend class CRubyize;
+    friend class CScriptObject;
 public:
     CRubyScript();
 
@@ -282,6 +283,7 @@ private:
     void CreateActiveScriptRuby();
     static VALUE CreateWin32OLE(IDispatch* pdisp);
     static VALUE CreateVariant(VARIANT&);
+    static void CreateVariant(VALUE, VARIANT*);
 public:
     IDispatch* CreateGlobalDispatch();
     IDispatch* CreateDispatch(VALUE obj);

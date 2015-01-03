@@ -16,11 +16,14 @@
 #if !defined(SCRIPT_OBJECT_H)
 #define SCRIPT_OBJECT_H
 
+class CObjectStore;
+
 class CScriptObject : public IDispatchEx
 {
 public:
     // pobjdispatch should be AddRefed
-    CScriptObject(VALUE v, IDispatch* pobjdispatch, IDispatch* pdisp = NULL) :
+    CScriptObject(CObjectStore* pobjstore, VALUE v, IDispatch* pobjdispatch, IDispatch* pdisp = NULL) :
+        m_pObjectStore(pobjstore),
         m_object(v),
         m_objectDispatch(pobjdispatch),
         m_pDispatch(pdisp),
@@ -100,42 +103,7 @@ public:
         /* [size_is][in] */ LPOLESTR __RPC_FAR *rgszNames,
         /* [in] */ UINT cNames,
         /* [in] */ LCID lcid,
-        /* [size_is][out] */ DISPID __RPC_FAR *rgDispId)
-    {
-        if (m_pDispatch)
-        {
-            HRESULT hr = m_pDispatch->GetIDsOfNames(riid, rgszNames, cNames, lcid, rgDispId);
-            if (hr != DISP_E_UNKNOWNNAME) 
-            {
-                if (hr == S_OK)
-                {
-                    for (int i = 0; i < m_cDispIds; i++)
-                    {
-                        if (*(m_DispIds + i) == *rgDispId) return hr;
-                    }
-                    if (m_cDispIds == m_sizeDispIds)
-                    {
-                        DISPID* p = new DISPID[m_sizeDispIds * 2];
-                        memcpy(p, m_DispIds, sizeof(DISPID) * m_sizeDispIds);
-                        delete[] m_DispIds;
-                        m_sizeDispIds *= 2;
-                        m_DispIds = p;
-                    }
-                    *(m_DispIds + m_cDispIds++) = *rgDispId;
-                }
-                return hr;
-            }
-        }
-        USES_CONVERSION;
-        volatile VALUE v = rb_str_new_cstr(W2A(*rgszNames));
-        v = rb_funcall(m_object, rb_intern("get_method_id"), 1, v);
-        *rgDispId = NUM2INT(v);
-        for (UINT i = 2; i < cNames; i++)
-        {
-            *(rgDispId + i) = DISPID_UNKNOWN;
-        }
-        return (*rgDispId == DISPID_UNKNOWN) ? DISP_E_UNKNOWNNAME : S_OK;
-    }
+        /* [size_is][out] */ DISPID __RPC_FAR *rgDispId);
         
     virtual /* [local] */ HRESULT STDMETHODCALLTYPE Invoke( 
         /* [in] */ DISPID dispIdMember,
@@ -145,26 +113,7 @@ public:
         /* [out][in] */ DISPPARAMS __RPC_FAR *pDispParams,
         /* [out] */ VARIANT __RPC_FAR *pVarResult,
         /* [out] */ EXCEPINFO __RPC_FAR *pExcepInfo,
-        /* [out] */ UINT __RPC_FAR *puArgErr)
-    {
-        if (m_pDispatch)
-        {
-            for (int i = 0; i < m_cDispIds; i++)
-            {
-                if (*(m_DispIds + i) == dispIdMember)
-                {
-                    return m_pDispatch->Invoke(dispIdMember, riid, lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
-                }
-            }
-        }
-        DISPPARAMS params = { NULL, pDispParams->rgdispidNamedArgs, 1 + pDispParams->cArgs, pDispParams->cNamedArgs };
-        params.rgvarg = (VARIANT*)_alloca(sizeof(VARIANT) * params.cArgs);
-        memcpy(params.rgvarg, pDispParams->rgvarg, sizeof(VARIANTARG) * pDispParams->cArgs);
-        VariantInit(&params.rgvarg[pDispParams->cArgs]);
-        params.rgvarg[pDispParams->cArgs].vt = VT_I4;
-        params.rgvarg[pDispParams->cArgs].lVal = dispIdMember;
-        return m_objectDispatch->Invoke(DISPID_VALUE, riid, lcid, DISPATCH_METHOD, &params, pVarResult, pExcepInfo, puArgErr);
-    }
+        /* [out] */ UINT __RPC_FAR *puArgErr);
 
     HRESULT STDMETHODCALLTYPE GetDispID( 
         /* [in] */ BSTR bstrName,
@@ -234,6 +183,7 @@ private:
     VALUE m_object;
     IDispatch* m_objectDispatch;
     IDispatch* m_pDispatch;
+    CObjectStore* m_pObjectStore;
     ULONG m_lCount;
     DISPID* m_DispIds;
     int m_cDispIds;

@@ -41,8 +41,6 @@ HRESULT CRubyize::FinalConstruct()
         m_pPassedObject = &v;
         rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
         m_pAsr = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
-        VALUE vdispid = rb_funcall(m_asr, rb_intern("get_method_id"), 1, rb_str_new_cstr("rubyize"));
-        m_dispidRubyize = NUM2INT(vdispid);
     }
     return hr;
 }
@@ -91,10 +89,9 @@ HRESULT STDMETHODCALLTYPE CRubyize::rubyize(
     VARIANT v;
     VariantInit(&v);
     m_pPassedObject = &v;
-    VALUE obj = rb_funcall(m_asr, rb_intern("rubyize"), 1, variant);
-    IDispatch* pdisp = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
+    VALUE obj = rb_funcall(variant, rb_intern("value"), 0);
     pObj->vt = VT_DISPATCH;
-    pObj->pdispVal = new CScriptObject(obj, pdisp);
+    pObj->pdispVal = CreateDispatch(obj);
     return S_OK;
 }
         
@@ -113,17 +110,18 @@ HRESULT STDMETHODCALLTYPE CRubyize::erubyize(
     delete[] psz;
     volatile VALUE fn = rb_str_new_cstr("(rubyize)");
     volatile VALUE vret = rb_funcall(m_asr, rb_intern("instance_eval"), 3, vscript, fn, LONG2FIX(0));
+    pObj->vt = VT_DISPATCH;
+    pObj->pdispVal = CreateDispatch(vret);
+    return S_OK;
+}
+
+IDispatch* CRubyize::CreateDispatch(VALUE val)
+{
     VARIANT v;
     VariantInit(&v);
     m_pPassedObject = &v;
-    VALUE proxy = rb_funcall(m_asr, rb_intern("to_proxy"), 1, vret);
-    IDispatch* pdisp = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
-    if (pdisp)
-    {
-        pObj->vt = VT_DISPATCH;
-        pObj->pdispVal = new CScriptObject(proxy, pdisp);
-    }
-    return S_OK;
+    VALUE proxy = rb_funcall(m_asr, rb_intern("to_proxy"), 1, val);
+    return new CScriptObject(this, proxy, (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal);
 }
 
 STDMETHODIMP CRubyize::InterfaceSupportsErrorInfo(REFIID riid)
