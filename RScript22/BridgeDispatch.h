@@ -1,11 +1,17 @@
 #if !defined(BRIDGE_DISPATCH_H)
 #define BRIDGE_DISPATCH
 
+class CObjectStore
+{
+public:
+    virtual void SetPassedObject(VARIANT&) = 0;
+};
+
 class CBridgeDispatch : public IDispatch 
 {
 public:
-    CBridgeDispatch(CRubyScript* p)
-        : m_lCount(1), m_pRubyScript(p)
+    CBridgeDispatch(CObjectStore* p)
+        : m_lCount(1), m_pObjectStore(p)
     {
     }
 
@@ -108,7 +114,7 @@ public:
             if (pDispParams->cArgs != 1)
                 return DISP_E_BADPARAMCOUNT;
             pv = (pDispParams->rgvarg[0].vt == (VT_VARIANT | VT_BYREF)) ? pDispParams->rgvarg[0].pvarVal : &pDispParams->rgvarg[0];
-            m_pRubyScript->SetPassedObject(*pv);
+            m_pObjectStore->SetPassedObject(*pv);
             break;
         default:
             return DISP_E_PARAMNOTFOUND;
@@ -118,7 +124,7 @@ public:
 
 private:
     ULONG m_lCount;
-    CRubyScript* m_pRubyScript;
+    CObjectStore* m_pObjectStore;
 };
 
 #endif

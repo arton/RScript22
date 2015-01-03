@@ -10,11 +10,12 @@
 #include "stdafx.h"
 #include "RubyScript.h"
 #include "Rubyize.h"
+#include "ScriptObject.h"
 
 #if defined(RUBY_2_2)
 #define RUBYIZE_VERSION L"2.2.0"
 #else
-#define RUBYIZE_VERSION L"2.1.0"
+#error "no ruby version defined"
 #endif
 
 #define RUBYIZE NULL
@@ -22,80 +23,36 @@
 // CRubyize
 HRESULT CRubyize::FinalConstruct()
 {
-    HRESULT hr = CComObject<CRubyScript>::CreateInstance(&m_pRubyScript);
+    HRESULT hr = CComObject<CRubyScript>::CreateInstance(&m_pRubyScript); // initialize ruby interpreter
     if (hr == S_OK)
     {
         m_pRubyScript->AddRef();
-        m_pRubyScript->SetScriptSite(this);
-        CComPtr<IActiveScriptParse> pParse;
-        HRESULT hr = m_pRubyScript->QueryInterface(IID_IActiveScriptParse, (void**)&pParse);
-        if (hr == S_OK)
-        {
-            m_pRubyScript->SetScriptState(SCRIPTSTATE_CONNECTED);
-        }
+        VALUE bridge = CRubyScript::CreateWin32OLE(new CBridgeDispatch(this));
+        m_asr = rb_class_new_instance(1, &bridge, CRubyScript::s_asrClass);
+        rb_gc_register_address(&m_asr);
+        VARIANT v;
+        VariantInit(&v);
+        m_pPassedObject = &v;
+        rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
+        m_pAsr = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
+        VALUE vdispid = rb_funcall(m_asr, rb_intern("get_method_id"), 1, rb_str_new_cstr("rubyize"));
+        m_dispidRubyize = NUM2INT(vdispid);
     }
     return hr;
 }
 
 void CRubyize::FinalRelease()
 {
+    if (m_pAsr)
+    {
+        m_pAsr->Release();
+    }
+    rb_gc_unregister_address(&m_asr);
     if (m_pRubyScript)
     {
         m_pRubyScript->Close();
         m_pRubyScript->Release();
-        m_pRubyScript = NULL;
     }
-}
-
-HRESULT STDMETHODCALLTYPE CRubyize::GetLCID( 
-            /* [out] */ LCID __RPC_FAR *plcid)
-{
-    return E_NOTIMPL;
-}
-        
-HRESULT STDMETHODCALLTYPE CRubyize::GetItemInfo( 
-            /* [in] */ LPCOLESTR pstrName,
-            /* [in] */ DWORD dwReturnMask,
-            /* [out] */ IUnknown __RPC_FAR *__RPC_FAR *ppiunkItem,
-            /* [out] */ ITypeInfo __RPC_FAR *__RPC_FAR *ppti)
-{
-    return TYPE_E_ELEMENTNOTFOUND;
-}
-        
-HRESULT STDMETHODCALLTYPE CRubyize::GetDocVersionString( 
-            /* [out] */ BSTR __RPC_FAR *pbstrVersion)
-{
-      *pbstrVersion = SysAllocString(RUBYIZE_VERSION);
-      return S_OK;
-}
-        
-HRESULT STDMETHODCALLTYPE CRubyize::OnScriptTerminate( 
-            /* [in] */ const VARIANT __RPC_FAR *pvarResult,
-            /* [in] */ const EXCEPINFO __RPC_FAR *pexcepinfo)
-{
-    return S_OK;
-}
-        
-HRESULT STDMETHODCALLTYPE CRubyize::OnStateChange( 
-            /* [in] */ SCRIPTSTATE ssScriptState)
-{
-    return S_OK;
-}
-        
-HRESULT STDMETHODCALLTYPE CRubyize::OnScriptError( 
-            /* [in] */ IActiveScriptError __RPC_FAR *pscripterror)
-{
-    return S_OK;
-}
-        
-HRESULT STDMETHODCALLTYPE CRubyize::OnEnterScript( void)
-{
-    return S_OK;
-}
-        
-HRESULT STDMETHODCALLTYPE CRubyize::OnLeaveScript( void)
-{
-    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE CRubyize::get_Version( 
@@ -110,45 +67,11 @@ HRESULT STDMETHODCALLTYPE CRubyize::get_RubyVersion(
             /* [retval][out] */ BSTR __RPC_FAR *pVersion)
 {
     if (!pVersion) return E_POINTER;
-    VARIANT v;
-    VariantInit(&v);
-    HRESULT hr = Call(L"ruby_version", 0, NULL, &v);
-    if (hr == S_OK)
-    {
-        if (v.vt == VT_BSTR)
-        {
-            *pVersion = SysAllocString(v.bstrVal);
-        }
-        else if (v.vt == (VT_BSTR | VT_BYREF))
-        {
-            *pVersion = SysAllocString(*v.pbstrVal);
-        }
-        else
-        {
-            *pVersion = NULL;
-        }
-        VariantClear(&v);
-    }
-    return hr;
-}
 
-HRESULT CRubyize::Call(LPCOLESTR method, int cargs, VARIANT* args, VARIANT* pResult)
-{
-    CComPtr<IDispatch> pdisp;
-    HRESULT hr = m_pRubyScript->GetScriptDispatch(RUBYIZE, &pdisp);
-    if (hr == S_OK)
-    {
-        DISPID dispid[1];
-        hr = pdisp->GetIDsOfNames(IID_NULL, const_cast<LPOLESTR*>(&method), 1, LOCALE_SYSTEM_DEFAULT, dispid);
-        if (hr == S_OK)
-        {
-            DISPPARAMS params = { args, NULL, cargs, 0 };
-            unsigned int aerr;
-            hr = pdisp->Invoke(dispid[0], IID_NULL, LOCALE_SYSTEM_DEFAULT, DISPATCH_METHOD,
-                &params, pResult, NULL, &aerr);
-        }
-    }
-    return hr;    
+    VALUE v = rb_funcall(m_asr, rb_intern("ruby_version"), 0);
+    USES_CONVERSION;
+    *pVersion = SysAllocString(A2W(StringValueCStr(v)));
+    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE CRubyize::rubyize( 
@@ -156,7 +79,17 @@ HRESULT STDMETHODCALLTYPE CRubyize::rubyize(
             /* [retval][out] */ VARIANT __RPC_FAR *pObj)
 {
     if (!pObj) return E_POINTER;
-    return Call(L"rubyize", 1, &val, pObj);
+    VariantInit(pObj);
+
+    volatile VALUE variant = CRubyScript::CreateVariant(val);
+    VARIANT v;
+    VariantInit(&v);
+    m_pPassedObject = &v;
+    VALUE obj = rb_funcall(m_asr, rb_intern("rubyize"), 1, variant);
+    IDispatch* pdisp = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
+    pObj->vt = VT_DISPATCH;
+    pObj->pdispVal = new CScriptObject(obj, pdisp);
+    return S_OK;
 }
         
 HRESULT STDMETHODCALLTYPE CRubyize::erubyize( 
@@ -164,10 +97,27 @@ HRESULT STDMETHODCALLTYPE CRubyize::erubyize(
             /* [retval][out] */ VARIANT __RPC_FAR *pObj)
 {
     if (!pObj) return E_POINTER;
+    VariantInit(pObj);
+
+    USES_CONVERSION;
+    int len = SysStringLen(script);
+    LPSTR psz = new char[len * 2 + 1];
+    size_t m = WideCharToMultiByte(GetACP(), 0, script ? script : L"", len, psz, (int)len * 2 + 1, NULL, NULL);
+    volatile VALUE vscript = rb_str_new(psz, m);
+    delete[] psz;
+    volatile VALUE fn = rb_str_new_cstr("(rubyize)");
+    volatile VALUE vret = rb_funcall(m_asr, rb_intern("instance_eval"), 3, vscript, fn, LONG2FIX(0));
     VARIANT v;
-    v.vt = VT_BSTR;
-    v.bstrVal = script;
-    return Call(L"erubyize", 1, &v, pObj);
+    VariantInit(&v);
+    m_pPassedObject = &v;
+    VALUE proxy = rb_funcall(m_asr, rb_intern("to_proxy"), 1, vret);
+    IDispatch* pdisp = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
+    if (pdisp)
+    {
+        pObj->vt = VT_DISPATCH;
+        pObj->pdispVal = new CScriptObject(proxy, pdisp);
+    }
+    return S_OK;
 }
 
 STDMETHODIMP CRubyize::InterfaceSupportsErrorInfo(REFIID riid)

@@ -5,7 +5,6 @@
 #include "dllmain.h"
 #include "ItemDisp.h"
 #include "eventsink.h"
-#include "BridgeDispatch.h"
 #include "ScriptObject.h"
 
 // Win32OLE
@@ -21,13 +20,23 @@ struct OLE_VARIANT_DATA {
 static VALUE s_win32ole(Qnil);
 static VALUE s_win32ole_variant(Qnil);
 
-static VALUE CreateWin32OLE(IDispatch* pdisp)
+VALUE CRubyScript::CreateWin32OLE(IDispatch* pdisp)
 {
     volatile VALUE obj = rb_obj_alloc(s_win32ole);
     OLE_DATA* pole = reinterpret_cast<OLE_DATA*>(DATA_PTR(obj));
     pole->pDispatch = pdisp;
     return obj;
 }
+
+VALUE CRubyScript::CreateVariant(VARIANT& var)
+{
+    volatile VALUE val = rb_obj_alloc(s_win32ole_variant);
+    OLE_VARIANT_DATA* pvar = reinterpret_cast<OLE_VARIANT_DATA*>(DATA_PTR(val));
+    VariantCopy(&pvar->realvar, &var);
+    VariantCopy(&pvar->var, &var);
+    return val;
+}
+
 IDispatch* CRubyScript::CreateDispatch(VALUE obj)
 {
     VARIANT v;
@@ -61,6 +70,16 @@ IDispatch* CRubyScript::CreateGlobalDispatch()
     rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
     IDispatch* pdisp = (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal;
     return new CScriptObject(m_asr, pdisp, pglobal);
+}
+
+void CRubyScript::CreateActiveScriptRuby()
+{
+    if (m_asr == Qnil)
+    {
+        VALUE v = CreateWin32OLE(new CBridgeDispatch(this));
+        m_asr = rb_class_new_instance(1, &v, s_asrClass);
+        rb_gc_register_address(&m_asr);
+    }
 }
 
 // CRubyScript
@@ -180,14 +199,17 @@ HRESULT STDMETHODCALLTYPE CRubyScript::SetScriptState(
 	switch (ss)
 	{
 	case SCRIPTSTATE_STARTED:
+            CreateActiveScriptRuby();
 	    BindNamedItem();
 	    break;
 	case SCRIPTSTATE_CONNECTED:
+            CreateActiveScriptRuby();
 	    Connect();
 	    BindNamedItem();
 	    ConnectToEvents();
 	    break;
 	case SCRIPTSTATE_INITIALIZED:
+            CreateActiveScriptRuby();
 	    Disconnect(true);	// Disconnect all Sink
 	    UnbindNamedItem();
 	    break;
@@ -278,10 +300,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddNamedItem(
 
 void CRubyScript::AddConst(LPCOLESTR pname, VARIANT& var)
 {
-    volatile VALUE val = rb_obj_alloc(s_win32ole_variant);
-    OLE_VARIANT_DATA* pvar = reinterpret_cast<OLE_VARIANT_DATA*>(DATA_PTR(val));
-    VariantCopy(&pvar->realvar, &var);
-    VariantCopy(&pvar->var, &var);
+    volatile VALUE val = CreateVariant(var);
     USES_CONVERSION;
     volatile VALUE vname = rb_str_new_cstr(W2A(pname));
     rb_funcall(m_asr, rb_intern("add_constant"), 2, vname, val);
@@ -766,6 +785,8 @@ void CRubyScript::Disconnect(bool fSinkOnly)
     if (m_asr != Qnil)
     {
         rb_funcall(m_asr, rb_intern("remove_items"), 0);
+        rb_gc_unregister_address(&m_asr);
+        m_asr = Qnil;
     }
     for (ItemMapIter it = m_mapItem.begin(); it != m_mapItem.end(); it++)
     {
@@ -776,8 +797,7 @@ void CRubyScript::Disconnect(bool fSinkOnly)
         }
     }
     m_mapItem.clear();
-    VALUE v = CreateWin32OLE(new CBridgeDispatch(this));
-    m_asr = rb_class_new_instance(1, &v, s_asrClass);
+    CreateActiveScriptRuby();
 }
 
 void CRubyScript::CopyNamedItem(ItemMap& map)

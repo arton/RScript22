@@ -31,6 +31,7 @@ typedef std::map<std::wstring, CEventSink*> EventMap;
 typedef std::map<std::wstring, CEventSink*>::iterator EventMapIter;
 
 // CRubyScript
+#include "BridgeDispatch.h"
 
 class ATL_NO_VTABLE CRubyScript :
     public CComObjectRootEx<CComMultiThreadModel>,
@@ -39,8 +40,10 @@ class ATL_NO_VTABLE CRubyScript :
     public IActiveScriptParse,
     public IActiveScriptGarbageCollector,
     public IActiveScriptParseProcedure,
-    public IServiceProvider
+    public IServiceProvider,
+    public CObjectStore
 {
+    friend class CRubyize;
 public:
     CRubyScript();
 
@@ -67,6 +70,7 @@ END_COM_MAP()
 
     void FinalRelease()
     {
+        Close();
 	m_pUnkMarshaler.Release();
     }
 
@@ -262,7 +266,9 @@ private:
     VARIANT* m_pPassedObject;
     HRESULT LoadTypeLib(REFGUID rguidTypeLib, DWORD dwMajor, DWORD dwMinor, ITypeLib** ppResult);
     void CreateEventSource(IActiveScriptSite*, ItemMap::value_type&, bool);
-
+    void CreateActiveScriptRuby();
+    static VALUE CreateWin32OLE(IDispatch* pdisp);
+    static VALUE CreateVariant(VARIANT&);
 public:
     IDispatch* CreateGlobalDispatch();
     IDispatch* CreateDispatch(VALUE obj);

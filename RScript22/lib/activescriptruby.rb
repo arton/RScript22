@@ -5,6 +5,7 @@
 
 require 'win32ole'
 require 'thread'
+require 'set'
 
 module ActiveScriptRuby 
 
@@ -17,6 +18,7 @@ module ActiveScriptRuby
       @method_name = { }
       @current_dispid = USER_DISPID
     end
+
     def add_method(name, script, fn, line)
       define_singleton_method(name.to_sym) { 
         instance_eval(script, fn, line)
@@ -29,7 +31,7 @@ module ActiveScriptRuby
       normalized = name.upcase.intern
       val = @dispid[normalized]
       unless val
-        method_name = methods.find { |x| x.casecmp(normalized) == 0 }
+        method_name = @target.methods.find { |x| x.casecmp(normalized) == 0 }
         if method_name
           @dispid[normalized] = val = @current_dispid += 1
           @method_name[val] = method_name
@@ -69,15 +71,21 @@ module ActiveScriptRuby
     def self_to_variant
       @bridge.PassObject(self)
     end
-
-    alias :rubyize :to_variant
     
-    def ruby_version
-      RUBY_VERSION
+    def to_proxy(val)
+      obj = AsrProxy.new(val)
+      @bridge.PassObject(obj)
+      obj
     end
-    
-    def erubyize(str)
-      to_variant(instance_eval(str))
+
+    def rubyize(variant)
+      obj = AsrProxy.new(variant.value)
+      @bridge.PassObject(obj)
+      obj
+    end
+
+    def ruby_version
+      "#{RUBY_VERSION}-p#{RUBY_PATCHLEVEL} (#{RUBY_PLATFORM})"
     end
     
     def create_event_handler(itemname, procname, code, line)
