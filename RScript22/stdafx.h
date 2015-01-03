@@ -1,6 +1,17 @@
-// stdafx.h : 標準のシステム インクルード ファイルのインクルード ファイル、または
-// 参照回数が多く、かつあまり変更されない、プロジェクト専用のインクルード ファイル
-// を記述します。
+/*
+ * Copyright(c) 2014 arton
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ */
 
 #pragma once
 
@@ -12,7 +23,7 @@
 
 #define _ATL_NO_AUTOMATIC_NAMESPACE
 
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS	// 一部の CString コンストラクターは明示的です。
+#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS
 
 
 #define ATL_NO_ASSERT_ON_DESTROY_NONEXISTENT_WINDOW
