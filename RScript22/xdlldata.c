@@ -1,5 +1,3 @@
-// dlldata.c 用のラッパー
-
 #ifdef _MERGE_PROXYSTUB // proxy stub DLL の結合
 
 #define REGISTER_PROXY_DLL //DllRegisterServer、他
