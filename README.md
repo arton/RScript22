@@ -29,12 +29,12 @@ End If
 
 ### description
 
-line 2 : instantiate Rubyizer
-line 4 : Rubyizer#erubyize is evaluate the string argument as Ruby script and returns the evaluated value as an object.
+* line 2 : instantiate Rubyizer
+* line 4 : Rubyizer#erubyize is evaluate the string argument as Ruby script and returns the evaluated value as an object.
          In this sample code, the argument is a ruby's Regexp literal, therefore the returned value is Regexp object.
-line 5 : send 'match' to the Regex object and set the result object to variable 'm'.
-line 7 : get the result array from Match object and set it to variable 'group'.
-line 8 : Because 'group' is VBScript's array, it can accessed its element with (index) syntax.
+* line 5 : send 'match' to the Regex object and set the result object to variable 'm'.
+* line 7 : get the result array from Match object and set it to variable 'group'.
+* line 8 : Because 'group' is VBScript's array, it can accessed its element with (index) syntax.
 
 ## Rubyizer methods
 
