@@ -57,7 +57,35 @@ void CRubyScript::CreateVariant(VALUE v, VARIANT* pvar)
     VariantCopy(pvar, &pvariant->var);
 }
 
+//
+// create proxied dispatch
+//
 IDispatch* CRubyScript::CreateDispatch(VALUE obj)
+{
+    VARIANT v;
+    VariantInit(&v);
+    m_pPassedObject = &v;
+    VALUE proxy = rb_funcall(m_asr, rb_intern("to_proxy"), 1, obj);
+    return new CScriptObject(this, proxy, (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal);
+}
+
+//
+// create ActiveScriptRuby dispatch (ASR was already proxied self)
+// - pglobal: outer dispatch
+//
+IDispatch* CRubyScript::CreateAsrDispatch(IDispatch* pglobal)
+{
+    VARIANT v;
+    VariantInit(&v);
+    m_pPassedObject = &v;
+    rb_funcall(m_asr, rb_intern("self_to_variant"), 0);
+    return new CScriptObject(this, m_asr, (v.vt == (VT_DISPATCH | VT_BYREF)) ? *v.ppdispVal : v.pdispVal, pglobal);
+}
+
+//
+// create simple (win32ole raw) dispatch. only support DISPID_VALUE
+//
+IDispatch* CRubyScript::CreateEventDispatch(VALUE obj)
 {
     VARIANT v;
     VariantInit(&v);
@@ -84,7 +112,7 @@ IDispatch* CRubyScript::CreateGlobalDispatch()
     {
         pglobal = (*it).second->GetDispatch();
     }
-    return new CScriptObject(this, m_asr, CreateDispatch(m_asr), pglobal);
+    return CreateAsrDispatch(pglobal);
 }
 
 void CRubyScript::CreateActiveScriptRuby()
@@ -730,7 +758,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseProcedureText(
     volatile VALUE vname = rb_str_new_cstr(iname);
     volatile VALUE handler = rb_funcall(m_asr, rb_intern("create_event_proc"), 3, vname, vscript, LONG2FIX(ulStartingLineNumber));
     delete[] psz;
-    *ppdisp = CreateDispatch(handler);
+    *ppdisp = CreateEventDispatch(handler);
     return S_OK;
 }
 

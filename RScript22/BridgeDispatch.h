@@ -18,7 +18,9 @@
 class CObjectStore
 {
 public:
+    // set variant for receiving an object that ASR passed
     virtual void SetPassedObject(VARIANT&) = 0;
+    // create proxy dispatch
     virtual IDispatch* CreateDispatch(VALUE) = 0;
 };
 

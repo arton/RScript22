@@ -286,7 +286,12 @@ private:
     static void CreateVariant(VALUE, VARIANT*);
 public:
     IDispatch* CreateGlobalDispatch();
+    // create proxied dispatch
     IDispatch* CreateDispatch(VALUE obj);
+    // create event only dispatch
+    IDispatch* CreateEventDispatch(VALUE);
+    // create asr dispatch, take global dispatch
+    IDispatch* CreateAsrDispatch(IDispatch* pglobal);
 };
 
 //OBJECT_ENTRY_AUTO(__uuidof(RubyScript), CRubyScript)
