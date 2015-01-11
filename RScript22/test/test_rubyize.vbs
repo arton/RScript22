@@ -43,3 +43,9 @@ Sub TestRegex
   Assert.Equals "a", a(2)
 End Sub
 
+Sub TestClassDef
+  set r = CreateObject("ruby.object." & version)
+  set obj = r.erubyize("class X;def test(x);x + 8;end;end;X.new")
+  x = obj.test(2)
+  Assert.Equals 10, x
+End Sub
