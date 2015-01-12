@@ -18,7 +18,7 @@
 
 class CObjectStore;
 
-class CScriptObject : public IDispatchEx
+class CScriptObject : public IDispatchEx, public ISupportErrorInfo
 {
 public:
     // pobjdispatch should be AddRefed
@@ -54,34 +54,14 @@ public:
 
     HRESULT  STDMETHODCALLTYPE QueryInterface(
 		const IID & riid,  
-		void **ppvObj)
-    {
-	if (!ppvObj) return E_POINTER;
+		void **ppvObj);
 
-	if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_IDispatch) || IsEqualIID(riid, IID_IDispatchEx))
-	{
-            m_lCount++;
-            *ppvObj = this;
-            return S_OK;
-	}
-	return E_NOINTERFACE;
-    }
+    ULONG  STDMETHODCALLTYPE AddRef();
 
-    ULONG  STDMETHODCALLTYPE AddRef()
-    {
-        return ++m_lCount;
-    }
+    ULONG  STDMETHODCALLTYPE Release();
 
-    ULONG  STDMETHODCALLTYPE Release()
-    {
-        m_lCount--;
-        if (m_lCount != 0)
-        {
-            return m_lCount;
-        }
-        delete this;
-        return 0;
-    }
+    // ISupportErrorInfo
+    STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid);
 
     // IDispatch
     virtual HRESULT STDMETHODCALLTYPE GetTypeInfoCount( 

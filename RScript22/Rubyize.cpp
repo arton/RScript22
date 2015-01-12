@@ -102,17 +102,50 @@ HRESULT STDMETHODCALLTYPE CRubyize::erubyize(
     if (!pObj) return E_POINTER;
     VariantInit(pObj);
 
+    HRESULT hr(S_OK);
     USES_CONVERSION;
     int len = SysStringLen(script);
     LPSTR psz = new char[len * 2 + 1];
     size_t m = WideCharToMultiByte(GetACP(), 0, script ? script : L"", len, psz, (int)len * 2 + 1, NULL, NULL);
+    *(psz + m) = '\0';
     volatile VALUE vscript = rb_str_new(psz, m);
+    volatile VALUE params[] = {
+        m_asr, 
+        rb_intern("instance_eval"),
+        3,
+        rb_str_new(psz, m),
+        rb_str_new_cstr("(rubyize)"),
+        LONG2FIX(0)
+    };
+    int state(0);
+    volatile VALUE vret = rb_protect(CRubyScript::safe_funcall, (VALUE)params, &state);
+    if (state)
+    {
+        volatile VALUE v = rb_errinfo();
+        if (!NIL_P(v))
+        {
+            size_t len(0);
+            volatile VALUE msg = rb_funcall(v, rb_intern("message"), 0);
+            if (!NIL_P(msg)) len = strlen(StringValueCStr(msg));
+            volatile VALUE excep = rb_funcall(v, rb_intern("class"), 0);
+            excep = rb_funcall(excep, rb_intern("to_s"), 0);
+            len += strlen(StringValueCStr(excep));
+            LPOLESTR p = reinterpret_cast<LPOLESTR>(_alloca(sizeof(OLECHAR) * (len + 8)));
+            swprintf(p, L"%hs: %hs", StringValueCStr(excep), (NIL_P(msg)) ? "" : StringValueCStr(msg));
+            hr = Error(p);
+        }
+        else
+        {
+            hr = Error(L"Unknown error");
+        }
+    }
+    else
+    {
+        pObj->vt = VT_DISPATCH;
+        pObj->pdispVal = CreateDispatch(vret);
+    }
     delete[] psz;
-    volatile VALUE fn = rb_str_new_cstr("(rubyize)");
-    volatile VALUE vret = rb_funcall(m_asr, rb_intern("instance_eval"), 3, vscript, fn, LONG2FIX(0));
-    pObj->vt = VT_DISPATCH;
-    pObj->pdispVal = CreateDispatch(vret);
-    return S_OK;
+    return hr;
 }
 
 IDispatch* CRubyize::CreateDispatch(VALUE val)
@@ -126,14 +159,14 @@ IDispatch* CRubyize::CreateDispatch(VALUE val)
 
 STDMETHODIMP CRubyize::InterfaceSupportsErrorInfo(REFIID riid)
 {
-	static const IID* arr[] = 
-	{
-		&IID_IRubyize
-	};
-	for (int i=0; i < sizeof(arr) / sizeof(arr[0]); i++)
-	{
-		if (InlineIsEqualGUID(*arr[i],riid))
-			return S_OK;
-	}
-	return S_FALSE;
+    static const IID* arr[] = 
+    {
+	&IID_IRubyize
+    };
+    for (int i=0; i < sizeof(arr) / sizeof(arr[0]); i++)
+    {
+	if (InlineIsEqualGUID(*arr[i],riid))
+	    return S_OK;
+    }
+    return S_FALSE;
 }

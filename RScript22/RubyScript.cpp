@@ -19,6 +19,7 @@
 #include "ItemDisp.h"
 #include "eventsink.h"
 #include "ScriptObject.h"
+#include "ScriptError.h"
 
 // Win32OLE
 struct OLE_DATA {
@@ -593,15 +594,30 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddScriptlet(
     {
         USES_CONVERSION;
 	HRESULT hr = E_UNEXPECTED;
-        volatile VALUE vname = rb_str_new_cstr(W2A((!pstrSubItemName || wcslen(pstrSubItemName) == 0) ? pstrItemName : pstrSubItemName));
-        volatile VALUE eventname = rb_str_new_cstr(W2A(pstrEventName));
         size_t len = wcslen(pstrCode);
         LPSTR pScript = new char[len * 2 + 1];
         size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, pScript, (int)len * 2 + 1, NULL, NULL);
-        volatile VALUE vscript = rb_str_new(pScript, m);
-        volatile VALUE handler = rb_funcall(m_asr, rb_intern("create_event_handler"), 4, vname, eventname, vscript, LONG2FIX(ulStartingLineNumber));
-        VALUE methodid = rb_funcall(handler, rb_intern("get_method_id"), 1, eventname);
+        *(pScript + m) = '\0';
+        volatile VALUE eventname = rb_str_new_cstr(W2A(pstrEventName));
+        volatile VALUE params[] = {
+            m_asr,
+            rb_intern("create_event_handler"),
+            4,
+            rb_str_new_cstr(W2A((!pstrSubItemName || wcslen(pstrSubItemName) == 0) ? pstrItemName : pstrSubItemName)),
+            eventname,
+            rb_str_new(pScript, m),
+            LONG2FIX(ulStartingLineNumber)
+        };
+        int state(0);
+        volatile VALUE handler = rb_protect(safe_funcall, (VALUE)params, &state);
+        if (state)
+        {
+            HRESULT hr = OnScriptError(pScript);
+            delete[] pScript;
+            return hr;
+        }
         delete[] pScript;
+        volatile VALUE methodid = rb_funcall(handler, rb_intern("get_method_id"), 1, eventname);
 
         ItemMapIter it = m_mapItem.end();
 
@@ -754,9 +770,22 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseProcedureText(
     size_t len = wcslen(pstrCode);
     LPSTR psz = new char[len * 2 + 1];
     size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, psz, (int)len * 2 + 1, NULL, NULL);
-    volatile VALUE vscript = rb_str_new(psz, m);
-    volatile VALUE vname = rb_str_new_cstr(iname);
-    volatile VALUE handler = rb_funcall(m_asr, rb_intern("create_event_proc"), 3, vname, vscript, LONG2FIX(ulStartingLineNumber));
+    volatile VALUE params[] = {
+        m_asr,
+        rb_intern("create_event_proc"),
+        3,
+        rb_str_new_cstr(iname),
+        rb_str_new(psz, m),
+        LONG2FIX(ulStartingLineNumber)
+    };
+    int state(0);
+    volatile VALUE handler = rb_protect(safe_funcall, (VALUE)params, &state);
+    if (state)
+    {
+        HRESULT hr = OnScriptError(psz);
+        delete[] psz;
+        return hr;
+    }
     delete[] psz;
     *ppdisp = CreateEventDispatch(handler);
     return S_OK;
@@ -954,13 +983,39 @@ HRESULT CRubyScript::LoadTypeLib(
     return S_OK;
 }
 
+VALUE CRubyScript::safe_funcall(VALUE args)
+{
+    VALUE* pargs = reinterpret_cast<VALUE*>(args);
+    return rb_funcallv(*pargs, *(pargs + 1), *(pargs + 2), pargs + 3);
+}
+
 HRESULT CRubyScript::EvalString(int line, int len, LPCSTR script, VARIANT* result, EXCEPINFO FAR* pExcepInfo, DWORD dwFlags)
 {
-    volatile VALUE vscript = rb_str_new(script, len);
-    volatile VALUE fn = rb_str_new_cstr("(asr)");
-    VALUE vret = rb_funcall(m_asr, rb_intern("instance_eval"), 3, vscript, fn, LONG2FIX(line));
+    VALUE params[] = {
+        m_asr,
+        rb_intern("instance_eval"),
+        3,
+        rb_str_new(script, len),
+        rb_str_new_cstr("(asr)"),
+        LONG2FIX(line)
+    };
+    int state(0);
+    VALUE vret = rb_protect(safe_funcall, (VALUE)params, &state);
+    if (state)
+    {
+        return OnScriptError(script);
+    }
     if (!result) return S_OK;
     m_pPassedObject = result;
     rb_funcall(m_asr, rb_intern("to_variant"), 1, vret);
     return S_OK;
+}
+
+HRESULT CRubyScript::OnScriptError(LPCSTR script)
+{
+    IActiveScriptError* p = new CScriptError(script);
+    GET_POINTER(IActiveScriptSite, m_pSite)
+    HRESULT hr = pIActiveScriptSite->OnScriptError(p);
+    RELEASE_POINTER(IActiveScriptSite)
+    return hr;
 }

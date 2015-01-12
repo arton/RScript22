@@ -284,6 +284,7 @@ private:
     static VALUE CreateWin32OLE(IDispatch* pdisp);
     static VALUE CreateVariant(VARIANT&);
     static void CreateVariant(VALUE, VARIANT*);
+    HRESULT OnScriptError(LPCSTR script);
 public:
     IDispatch* CreateGlobalDispatch();
     // create proxied dispatch
@@ -292,6 +293,8 @@ public:
     IDispatch* CreateEventDispatch(VALUE);
     // create asr dispatch, take global dispatch
     IDispatch* CreateAsrDispatch(IDispatch* pglobal);
+    // safe rb_funcall
+    static VALUE safe_funcall(VALUE args);
 };
 
 //OBJECT_ENTRY_AUTO(__uuidof(RubyScript), CRubyScript)

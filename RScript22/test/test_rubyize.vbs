@@ -49,3 +49,16 @@ Sub TestClassDef
   x = obj.test(2)
   Assert.Equals 10, x
 End Sub
+
+Sub TestSyntaxError
+  Assert.ExpectError "syntax error"
+  set r = CreateObject("ruby.object." & version)
+  set obj = r.erubyize("class X;def test..(x)x + 8;end;end;X.new")
+End Sub
+
+Sub TestRuntimeError
+  Assert.ExpectError "ZeroDivisionError"
+  set r = CreateObject("ruby.object." & version)
+  set obj = r.erubyize("class X;def test(x) 8 / x;end;end;X.new")
+  obj.test(0)
+End Sub
