@@ -18,7 +18,7 @@
 
 class CObjectStore;
 
-class CScriptObject : public IDispatchEx, public ISupportErrorInfo
+class CScriptObject : public IDispatchEx
 {
 public:
     // pobjdispatch should be AddRefed
@@ -59,9 +59,6 @@ public:
     ULONG  STDMETHODCALLTYPE AddRef();
 
     ULONG  STDMETHODCALLTYPE Release();
-
-    // ISupportErrorInfo
-    STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid);
 
     // IDispatch
     virtual HRESULT STDMETHODCALLTYPE GetTypeInfoCount( 

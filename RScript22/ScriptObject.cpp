@@ -23,14 +23,9 @@ HRESULT  STDMETHODCALLTYPE CScriptObject::QueryInterface(
 {
     if (!ppvObj) return E_POINTER;
 
-    if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_IDispatch) || IsEqualIID(riid, IID_IDispatchEx)
-        || IsEqualIID(riid, IID_IRubyScriptObject))
+    if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_IDispatch) || IsEqualIID(riid, IID_IDispatchEx))
     {
-        *ppvObj = (IDispatchEx*)this;
-    }
-    else if (IsEqualIID(riid, IID_ISupportErrorInfo))
-    {
-        *ppvObj = (ISupportErrorInfo*)this;
+        *ppvObj = this;
     }
     else
     {
@@ -155,20 +150,6 @@ HRESULT STDMETHODCALLTYPE CScriptObject::Invoke(
             len += strlen(StringValueCStr(excep));
             LPOLESTR p = reinterpret_cast<LPOLESTR>(_alloca(sizeof(OLECHAR) * (len + 8)));
             swprintf(p, L"%hs: %hs", StringValueCStr(excep), (NIL_P(msg)) ? "" : StringValueCStr(msg));
-            ICreateErrorInfo* pceinfo;
-            IErrorInfo* perrinfo;
-            if (CreateErrorInfo(&pceinfo) == S_OK)
-            {
-                pceinfo->SetGUID(IID_IRubyScriptObject);
-                pceinfo->SetDescription(p);
-                pceinfo->SetSource(L"RubyScript");
-                if (pceinfo->QueryInterface(IID_IErrorInfo, (void**)&perrinfo) == S_OK)
-                {
-                    SetErrorInfo(0, perrinfo);
-                    perrinfo->Release();
-                }
-                pceinfo->Release();
-            }
             if (pExcepInfo)
             {
                 pExcepInfo->wCode = 1001;
@@ -205,11 +186,3 @@ HRESULT STDMETHODCALLTYPE CScriptObject::Invoke(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CScriptObject::InterfaceSupportsErrorInfo(REFIID riid)
-{
-    if (InlineIsEqualGUID(IID_IRubyScriptObject, riid))
-    {
-	return S_OK;
-    }
-    return S_FALSE;
-}

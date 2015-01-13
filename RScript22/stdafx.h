@@ -48,4 +48,3 @@ extern class CRScript22Module _AtlModule;
 
 #define COUNT_OF(a) (sizeof(a)/sizeof(a[0]))
 
-EXTERN_C const IID IID_IRubyScriptObject;
