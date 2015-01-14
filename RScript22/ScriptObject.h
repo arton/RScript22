@@ -165,6 +165,7 @@ private:
     DISPID* m_DispIds;
     int m_cDispIds;
     int m_sizeDispIds;
+    HRESULT NewEnum(VARIANT __RPC_FAR *pvarRes);
 };
 
 #endif

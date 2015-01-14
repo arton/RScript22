@@ -28,7 +28,17 @@ module ActiveScriptRuby
       @method_name = { }
       @current_dispid = USER_DISPID
     end
-
+    alias :org_respond_to? :respond_to?
+    def respond_to?(m)
+      if org_respond_to?(m)
+        true
+      else
+        @target.respond_to?(m)
+      end
+    end
+    def to_enum
+      @target.to_enum
+    end
     def add_method(name, script, fn, line)
       define_singleton_method(name.to_sym) { 
         instance_eval(script, fn, line)

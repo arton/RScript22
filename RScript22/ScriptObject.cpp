@@ -16,6 +16,7 @@
 #include "stdafx.h"
 #include "RubyScript.h"
 #include "ScriptObject.h"
+#include "EnumVariant.h"
 
 HRESULT  STDMETHODCALLTYPE CScriptObject::QueryInterface(
     const IID & riid,  
@@ -125,6 +126,10 @@ HRESULT STDMETHODCALLTYPE CScriptObject::Invoke(
             }
         }
     }
+    if (dispIdMember == DISPID_NEWENUM)
+    {
+        return NewEnum(pVarResult);
+    }
     VALUE* argvalues = reinterpret_cast<VALUE*>(_alloca(sizeof(VALUE) * (pDispParams->cArgs + 4)));
     *argvalues = m_object;
     *(argvalues + 1) = rb_intern("call");
@@ -172,17 +177,23 @@ HRESULT STDMETHODCALLTYPE CScriptObject::Invoke(
     {
         if (vtype == WIN32OLE_CONPATIBLE[i])
         {
-            CRubyScript::CreateVariant(v, pVarResult);
-            if (pVarResult->vt == VT_ERROR && pVarResult->scode == DISP_E_PARAMNOTFOUND)
-            {
-                pVarResult->vt = VT_DISPATCH;
-                pVarResult->pdispVal = NULL;
-            }
+            CRubyScript::CreateVariant(v, pVarResult, true);
             return S_OK;
         }
     }
     pVarResult->vt = VT_DISPATCH;
     pVarResult->pdispVal = m_pObjectStore->CreateDispatch(v);
+    return S_OK;
+}
+
+HRESULT CScriptObject::NewEnum(VARIANT __RPC_FAR *pvarResult)
+{
+    if (!rb_funcall(m_object, rb_intern("respond_to?"), 1, rb_id2sym(rb_intern("each"))))
+    {
+        return DISP_E_MEMBERNOTFOUND;
+    }
+    pvarResult->vt = VT_UNKNOWN;
+    pvarResult->punkVal = new CEnumVariant(m_object);
     return S_OK;
 }
 

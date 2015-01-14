@@ -25,6 +25,8 @@ class CItemDisp;
 typedef std::map<std::wstring, CItemDisp*> ItemMap;
 typedef std::map<std::wstring, CItemDisp*>::iterator ItemMapIter;
 class CRubyScript;
+class CEnumVariant;
+
 class CScriptlet
 {
 public:
@@ -58,6 +60,7 @@ class ATL_NO_VTABLE CRubyScript :
 {
     friend class CRubyize;
     friend class CScriptObject;
+    friend class CEnumVariant;
 public:
     CRubyScript();
 
@@ -283,7 +286,7 @@ private:
     void CreateActiveScriptRuby();
     static VALUE CreateWin32OLE(IDispatch* pdisp);
     static VALUE CreateVariant(VARIANT&);
-    static void CreateVariant(VALUE, VARIANT*);
+    static void CreateVariant(VALUE, VARIANT*, bool asResult = false);
     HRESULT OnScriptError(LPCSTR script);
 public:
     IDispatch* CreateGlobalDispatch();

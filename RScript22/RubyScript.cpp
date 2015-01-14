@@ -51,11 +51,19 @@ VALUE CRubyScript::CreateVariant(VARIANT& var)
     return val;
 }
 
-void CRubyScript::CreateVariant(VALUE v, VARIANT* pvar)
+void CRubyScript::CreateVariant(VALUE v, VARIANT* pvar, bool asResult)
 {
     VALUE var = rb_class_new_instance(1, &v, s_win32ole_variant);
     OLE_VARIANT_DATA* pvariant = reinterpret_cast<OLE_VARIANT_DATA*>(DATA_PTR(var));
     VariantCopy(pvar, &pvariant->var);
+    if (asResult)
+    {
+        if (pvar->vt == VT_ERROR && pvar->scode == DISP_E_PARAMNOTFOUND)
+        {
+            pvar->vt = VT_DISPATCH;
+            pvar->pdispVal = NULL;
+        }
+    }
 }
 
 //

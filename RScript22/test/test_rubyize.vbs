@@ -62,3 +62,21 @@ Sub TestRuntimeError
   set obj = r.erubyize("class X;def test(x) 8 / x;end;end;X.new")
   obj.test(0)
 End Sub
+
+Sub TestNewEnum
+  set r = CreateObject("ruby.object." & version)
+  set x = r.erubyize("[1, 2, 3, 4, 5]")
+  i = 1
+  For Each e In x
+    Assert.Equals i, e
+    i = i + 1
+  Next
+  Assert.Equals 6, i
+  set x = r.erubyize("1..5")
+  i = 1
+  For Each e In x
+    Assert.Equals i, e
+    i = i + 1
+  Next
+  Assert.Equals 6, i
+End Sub
