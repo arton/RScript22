@@ -183,8 +183,8 @@ CRubyScript::CRubyScript()
     }
     else if (!s_threadInitialized)
     {
-        s_threadInitialized = true;
         rb_thread_create(NULL, NULL);
+        s_threadInitialized = true;
     }
     _ASSERT(!NIL_P(s_win32ole));
     _ASSERT(!NIL_P(s_asrClass));
@@ -256,6 +256,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::SetScriptState(
     /* [in] */ SCRIPTSTATE ss)
 {
     if (!m_pSite.IsOK()) return E_UNEXPECTED;
+    ATLTRACE(_T("SetScriptState:%d\n"), ss);
     if (m_state != ss)
     {
 	switch (ss)
@@ -348,11 +349,14 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddNamedItem(
         if ((*it).second)
         {
             (*it).second->Empty();
-            delete (*it).second;
+            (*it).second->SetFlag(dwFlags);
         }
         LeaveScript();
     }
-    m_mapItem.insert(ItemMap::value_type(pstrName, new CItemDisp(dwFlags)));
+    else
+    {
+        m_mapItem.insert(ItemMap::value_type(pstrName, new CItemDisp(dwFlags)));
+    }
     if (m_state == SCRIPTSTATE_STARTED || m_state == SCRIPTSTATE_CONNECTED)
     {
         AddNamedItemToScript(pstrName, dwFlags);
@@ -923,9 +927,9 @@ void CRubyScript::AddNamedItemToScript(LPCOLESTR pstrName, DWORD dwFlags)
     if (it == m_mapItem.end()) return;
 
     // Check NamedItem
-    ATLTRACE(_T("AddNamedItem %ls\n"), pstrName);
     GET_POINTER(IActiveScriptSite, m_pSite)
     IDispatch* pDisp = (*it).second->GetDispatch(pIActiveScriptSite, pstrName, GetCurrentThreadId() == m_dwThreadID);
+    ATLTRACE(_T("AddNamedItem %ls = %p\n"), pstrName, pDisp);
     if (!pDisp) 
     {
         RELEASE_POINTER(IActiveScriptSite)

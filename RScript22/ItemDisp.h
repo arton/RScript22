@@ -28,6 +28,7 @@ public:
         Empty();
     }
     inline DWORD GetFlag() const { return m_dwFlag; }
+    inline void SetFlag(DWORD dw) { m_dwFlag = dw; }
     inline bool IsSource() const { return (m_dwFlag | SCRIPTITEM_ISSOURCE) ? true : false; }
     IDispatch* GetDispatch()
     {
