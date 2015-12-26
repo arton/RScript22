@@ -23,7 +23,7 @@ File.open(dest, 'w') do |out|
 #{File.dirname($0).gsub(File::SEPARATOR, File::ALT_SEPARATOR)}#{File::ALT_SEPARATOR}ruby -x "#{dest}" %1 %2 %3 %4 %5 %6 %7 %8 %9
 @goto endofruby
 :WinNT
-"%~dp0ruby" -x "%~f0" %*
+#{File.dirname($0).gsub(File::SEPARATOR, File::ALT_SEPARATOR)}#{File::ALT_SEPARATOR}ruby -x "%~f0" %*
 @goto endofruby
 
 HEAD
