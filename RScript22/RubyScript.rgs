@@ -1,5 +1,27 @@
 HKCR
 {
+	'.rb' = s 'RubyScriptFile'
+	RubyScriptFile = s 'RubyScript File'
+	{
+		DefaultIcon = s '%MODULE%'
+		ScriptEngine = s 'RubyScript'
+		Shell = s ''
+		{
+			Open1 = s 'Run(&R)'
+			{
+				Command = s '%windir%\%SCPATH%\CScript.exe "%%1" %%*'
+			}
+			Open2 = s 'Run with WScript(&W)'
+			{
+				Command = s '%windir%\%SCPATH%\WScript.exe "%%1" %%*'
+			}
+			Edit = s 'Edit(&E)'
+			{
+				Command = s 'Notepad.exe "%%1"'
+			}
+		}
+	}
+
 	RubyScript.%RSCRIPT_VERSION% = s 'RubyScript Language (module)'
 	{
 		CLSID = s '%CLSID%'
