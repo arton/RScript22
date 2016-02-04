@@ -150,7 +150,8 @@ module ActiveScriptRuby
         @global = obj
       end
       # ASR 1.0 compatibility
-      instance_eval("#{name.capitalize} = #{name}; @#{name} = #{name}")
+      instance_eval("@#{name} = #{name}")
+      GlobalProxy.const_set(name.capitalize, obj)
     end
 
     def add_constant(name, variant)
@@ -171,7 +172,7 @@ module ActiveScriptRuby
         end
         # ASR 1.0 compatibility
         instance_eval("@#{name} = nil")
-        remove_const(name.capitalize)
+        GlobalProxy.delete_constant(name.capitalize)
         @named_items[name] = nil
       end
     end
