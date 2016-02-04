@@ -41,6 +41,24 @@ private:
 };
 typedef std::list<CScriptlet> ScriptletList;
 typedef std::list<CScriptlet>::iterator ScriptletListIter;
+class CScriptText
+{
+public:
+    CScriptText(LPSTR code, size_t codesize, ULONG startline, DWORD flag)
+        : m_code(code), m_codesize(codesize), m_startline(startline), m_flag(flag)
+    {
+    }
+    virtual ~CScriptText()
+    {
+        delete[] m_code;
+    }
+    LPSTR m_code;
+    size_t m_codesize;
+    ULONG m_startline;
+    DWORD m_flag;
+};
+typedef std::list<CScriptText*> TextList;
+typedef std::list<CScriptText*>::iterator TextListIter;
 class CEventSink;
 typedef std::map<std::wstring, CEventSink*> EventMap;
 typedef std::map<std::wstring, CEventSink*>::iterator EventMapIter;
@@ -271,6 +289,7 @@ private:
     GIP(IActiveScriptSite) m_pSite;
     ItemMap m_mapItem;
     ScriptletList m_listScriptlets;
+    TextList m_listScriptText;
     EventMap m_mapEvent;
     HRESULT Connect();
     void ConnectToEvents();

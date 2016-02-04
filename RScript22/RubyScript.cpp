@@ -302,6 +302,18 @@ HRESULT STDMETHODCALLTYPE CRubyScript::SetScriptState(
                     m_pSite.Unglobalize();
                     ATLTRACE(_T("no scriptsite in SetScriptState %d\n"), ss);
                 }
+                if (ss == SCRIPTSTATE_STARTED && m_listScriptText.size() > 0)
+                {
+                    EnterScript();
+                    for (; m_listScriptText.size() > 0;)
+                    {
+                        CScriptText* pst = m_listScriptText.front();
+	                HRESULT hr = EvalString(pst->m_startline, pst->m_codesize, pst->m_code, NULL, NULL, pst->m_flag);
+                        delete pst;
+                        m_listScriptText.pop_front();
+                    }
+	            LeaveScript();
+                }
             }
 	}
 	return S_OK;
@@ -353,10 +365,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddNamedItem(
         }
         LeaveScript();
     }
-    else
-    {
-        m_mapItem.insert(ItemMap::value_type(pstrName, new CItemDisp(dwFlags)));
-    }
+    m_mapItem.insert(ItemMap::value_type(pstrName, new CItemDisp(dwFlags)));
     if (m_state == SCRIPTSTATE_STARTED || m_state == SCRIPTSTATE_CONNECTED)
     {
         AddNamedItemToScript(pstrName, dwFlags);
@@ -722,13 +731,19 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseScriptText(
 	return S_OK;
     }
 
+    if (pvarResult)
+    {
+        VariantInit(pvarResult);
+    }
+    if (m_state == SCRIPTSTATE_INITIALIZED)
+    {
+        m_listScriptText.push_back(new CScriptText(psz, cb, ulStartingLineNumber, dwFlags));
+        return S_OK;
+    }
+
     HRESULT hr = E_UNEXPECTED;
     try 
     {
-	if (pvarResult)
-	{
-	    VariantInit(pvarResult);
-	}
 	Connect();
         EnterScript();
 	hr = EvalString(ulStartingLineNumber, cb, psz, pvarResult, NULL, dwFlags);
@@ -826,8 +841,7 @@ HRESULT CRubyScript::Connect()
     GET_POINTER(IActiveScriptSite, m_pSite)
     for (ItemMapIter it = m_mapItem.begin(); it != m_mapItem.end(); it++)
     {
-	if ((*it).second->IsOK() == false)
-            AddNamedItem((*it).first.c_str(), (*it).second->GetFlag());
+        AddNamedItem((*it).first.c_str(), (*it).second->GetFlag());
 
 	if ((*it).second->IsSource())
 	{
