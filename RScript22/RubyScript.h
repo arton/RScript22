@@ -48,6 +48,11 @@ public:
         : m_code(code), m_codesize(codesize), m_startline(startline), m_flag(flag)
     {
     }
+    CScriptText(CScriptText* p)
+        : m_flag(p->m_flag), m_startline(p->m_startline), m_codesize(p->m_codesize)
+    {
+        m_code = lstrcpyA(new char[m_codesize], p->m_code);
+    }
     virtual ~CScriptText()
     {
         delete[] m_code;
@@ -124,7 +129,13 @@ END_COM_MAP()
         m_threadState = SCRIPTTHREADSTATE_NOTINSCRIPT;
         pSite->OnLeaveScript();
     }
-    inline void CopyPersistent(int n, std::string& s) { m_nStartLinePersistent = n; m_strScriptPersistent = s; }
+    void CopyPersistent(TextList& list) 
+    {
+        for (TextListIter it = list.begin(); it != list.end(); it++)
+        {
+            m_listScriptText.push_back(new CScriptText(*it));
+        }
+    }
     HRESULT EvalString(int line, int len, LPCSTR script, VARIANT* result = NULL, EXCEPINFO FAR* pExcepInfo = NULL, DWORD dwFlags = 0);
 
     inline void SetPassedObject(VARIANT& v)
@@ -279,8 +290,6 @@ private:
     HANDLE m_hThread;
     SCRIPTSTATE m_state;
     SCRIPTTHREADSTATE m_threadState;
-    int m_nStartLinePersistent;
-    std::string m_strScriptPersistent;
     std::wstring m_strGlobalObjectName;
     static VALUE s_asrModule;
     static VALUE s_asrClass;

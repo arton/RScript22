@@ -160,7 +160,6 @@ CRubyScript::CRubyScript()
       m_pUnkMarshaler(NULL),
       m_asr(Qnil),
       m_dwThreadID(GetCurrentThreadId()),
-      m_nStartLinePersistent(0),
       m_pPassedObject(NULL)
 {
     ATLTRACE(_T("CRubyScript on thread:%d\n"), GetCurrentThreadId());
@@ -442,6 +441,10 @@ HRESULT STDMETHODCALLTYPE CRubyScript::GetScriptDispatch(
     /* [out] */ __RPC__deref_out_opt IDispatch **ppdisp)
 {
     if (!ppdisp) return E_POINTER;
+    if (m_state == SCRIPTSTATE_UNINITIALIZED)
+    {
+        SetScriptState(SCRIPTSTATE_INITIALIZED);
+    }
     HRESULT hr = S_FALSE;
     *ppdisp = NULL;
     ATLTRACE(_T("GetScriptDispatch for %ls\n"), (pstrItemName) ? pstrItemName : L"GLOBALNAMESPACE");
@@ -541,7 +544,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::Clone(
         else
         {
             p->CopyNamedItem(m_mapItem);
-            p->CopyPersistent(m_nStartLinePersistent, m_strScriptPersistent);
+            p->CopyPersistent(m_listScriptText);
         }
     }
     return (hr == S_OK) ? S_OK : E_UNEXPECTED;
@@ -725,9 +728,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseScriptText(
     if ((dwFlags & (SCRIPTTEXT_ISPERSISTENT | SCRIPTTEXT_ISVISIBLE)) == (SCRIPTTEXT_ISPERSISTENT | SCRIPTTEXT_ISVISIBLE)
 	    && m_state == SCRIPTSTATE_UNINITIALIZED)
     {
-	m_nStartLinePersistent = ulStartingLineNumber;
-	m_strScriptPersistent = psz;
-	delete[] psz;
+        m_listScriptText.push_back(new CScriptText(psz, cb, ulStartingLineNumber, SCRIPTTEXT_ISVISIBLE));
 	return S_OK;
     }
 
