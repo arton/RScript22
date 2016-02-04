@@ -22,12 +22,6 @@
 #include "RubyScript.h"
 #include "Rubyize.h"
 
-#if defined(_WIN64)
-#define SCPATH L"System32"
-#else
-#define SCPATH L"Syswow64"
-#endif
-
 #if defined(RUBY_2_2)
 #define RSCRIPT_VERSION L"2.2"
 #define CLSID_RUBYSCRIPT  L"{456A3763-90A4-4F2A-BFF1-4B773C1056EC}"
@@ -50,16 +44,21 @@ _ATL_REGMAP_ENTRY CRubyize::RegEntries[] = {
 _ATL_REGMAP_ENTRY CRubyScript::RegEntries[] = {
 	{ L"RSCRIPT_VERSION", RSCRIPT_VERSION },
 	{ L"CLSID", CLSID_RUBYSCRIPT },
-        { L"SCPATH", SCPATH },
-        { L"windir", NULL },
+        { L"SCPATH", NULL },
 	{ NULL, NULL }
 };
 
 HRESULT WINAPI CRubyScript::UpdateRegistry(BOOL bRegister)
 {
-    DWORD len = GetEnvironmentVariable(L"windir", NULL, 0);
-    RegEntries[3].szData = new WCHAR[len];
-    GetEnvironmentVariable(L"windir", const_cast<LPWSTR>(RegEntries[3].szData), len);
+    UINT (WINAPI *getsysdirfun)(LPWSTR, UINT) = GetSystemWow64Directory;
+    UINT len = GetSystemWow64Directory(NULL, 0);
+    if (!len)
+    {
+        getsysdirfun = GetSystemDirectory;
+        len = GetSystemDirectory(NULL, 0);
+    }
+    RegEntries[2].szData = new WCHAR[len];
+    getsysdirfun(const_cast<LPWSTR>(RegEntries[2].szData), len);
     return _AtlModule.CAtlModule::UpdateRegistryFromResourceS(IDR_RUBYSCRIPT, bRegister, RegEntries);
 }
 HRESULT WINAPI CRubyize::UpdateRegistry(BOOL bRegister)
