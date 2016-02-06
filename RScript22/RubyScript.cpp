@@ -620,7 +620,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::AddScriptlet(
 	HRESULT hr = E_UNEXPECTED;
         size_t len = wcslen(pstrCode);
         LPSTR pScript = new char[len * 2 + 1];
-        size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, pScript, (int)len * 2 + 1, NULL, NULL);
+        int m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, pScript, (int)len * 2 + 1, NULL, NULL);
         *(pScript + m) = '\0';
         volatile VALUE eventname = rb_str_new_cstr(W2A(pstrEventName));
         volatile VALUE params[] = {
@@ -797,7 +797,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::ParseProcedureText(
     LPCSTR iname = (pstrItemName) ? W2A(pstrItemName) : W2A(m_strGlobalObjectName.c_str());
     size_t len = wcslen(pstrCode);
     LPSTR psz = new char[len * 2 + 1];
-    size_t m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, psz, (int)len * 2 + 1, NULL, NULL);
+    int m = WideCharToMultiByte(GetACP(), 0, pstrCode, (int)len, psz, (int)len * 2 + 1, NULL, NULL);
     volatile VALUE params[] = {
         m_asr,
         rb_intern("create_event_proc"),
@@ -1013,16 +1013,16 @@ HRESULT CRubyScript::LoadTypeLib(
 VALUE CRubyScript::safe_funcall(VALUE args)
 {
     VALUE* pargs = reinterpret_cast<VALUE*>(args);
-    return rb_funcallv(*pargs, *(pargs + 1), *(pargs + 2), pargs + 3);
+    return rb_funcallv(*pargs, *(pargs + 1), (int)*(pargs + 2), pargs + 3);
 }
 
-HRESULT CRubyScript::EvalString(int line, int len, LPCSTR script, VARIANT* result, EXCEPINFO FAR* pExcepInfo, DWORD dwFlags)
+HRESULT CRubyScript::EvalString(ULONG line, size_t len, LPCSTR script, VARIANT* result, EXCEPINFO FAR* pExcepInfo, DWORD dwFlags)
 {
     VALUE params[] = {
         m_asr,
         rb_intern("instance_eval"),
         3,
-        rb_str_new(script, len),
+        rb_str_new(script, (long)len),
         rb_str_new_cstr("(asr)"),
         LONG2FIX(line)
     };

@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2014 arton
+ * Copyright(c) 2014, 2015 arton
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,14 +21,7 @@
 
 #include "RubyScript.h"
 #include "Rubyize.h"
-
-#if defined(RUBY_2_2)
-#define RSCRIPT_VERSION L"2.2"
-#define CLSID_RUBYSCRIPT  L"{456A3763-90A4-4F2A-BFF1-4B773C1056EC}"
-#define CLSID_RUBYIZE  L"{0BCFF05A-C2BF-4CB2-A778-3428A8E85A21}"
-#else
-#error "no ruby version defined"
-#endif
+#include "version.h"
 
 CRScript22Module _AtlModule;
 GIT _init_git;
@@ -37,12 +30,12 @@ OBJECT_ENTRY_AUTO(CLSID_Rubyize, CRubyize)
 OBJECT_ENTRY_AUTO(CLSID_RubyScript, CRubyScript)
 
 _ATL_REGMAP_ENTRY CRubyize::RegEntries[] = {
-	{ L"RSCRIPT_VERSION", RSCRIPT_VERSION },
+	{ L"RSCRIPT_VERSION", _T(RSCRIPT_VERSION) },
 	{ L"CLSID", CLSID_RUBYIZE },
 	{ NULL, NULL }
 };
 _ATL_REGMAP_ENTRY CRubyScript::RegEntries[] = {
-	{ L"RSCRIPT_VERSION", RSCRIPT_VERSION },
+	{ L"RSCRIPT_VERSION", _T(RSCRIPT_VERSION) },
 	{ L"CLSID", CLSID_RUBYSCRIPT },
         { L"SCPATH", NULL },
 	{ NULL, NULL }
@@ -50,6 +43,10 @@ _ATL_REGMAP_ENTRY CRubyScript::RegEntries[] = {
 
 HRESULT WINAPI CRubyScript::UpdateRegistry(BOOL bRegister)
 {
+#if defined(_WIN64)
+    UINT (WINAPI *getsysdirfun)(LPWSTR, UINT) = GetSystemDirectory;
+    UINT len = GetSystemWow64Directory(NULL, 0);
+#else
     UINT (WINAPI *getsysdirfun)(LPWSTR, UINT) = GetSystemWow64Directory;
     UINT len = GetSystemWow64Directory(NULL, 0);
     if (!len)
@@ -57,6 +54,7 @@ HRESULT WINAPI CRubyScript::UpdateRegistry(BOOL bRegister)
         getsysdirfun = GetSystemDirectory;
         len = GetSystemDirectory(NULL, 0);
     }
+#endif
     RegEntries[2].szData = new WCHAR[len];
     getsysdirfun(const_cast<LPWSTR>(RegEntries[2].szData), len);
     return _AtlModule.CAtlModule::UpdateRegistryFromResourceS(IDR_RUBYSCRIPT, bRegister, RegEntries);

@@ -17,12 +17,7 @@
 #include "RubyScript.h"
 #include "Rubyize.h"
 #include "ScriptObject.h"
-
-#if defined(RUBY_2_2)
-#define RUBYIZE_VERSION L"2.2.0"
-#else
-#error "no ruby version defined"
-#endif
+#include "version.h"
 
 #define RUBYIZE NULL
 /////////////////////////////////////////////////////////////////////////////
@@ -106,7 +101,7 @@ HRESULT STDMETHODCALLTYPE CRubyize::erubyize(
     USES_CONVERSION;
     int len = SysStringLen(script);
     LPSTR psz = new char[len * 2 + 1];
-    size_t m = WideCharToMultiByte(GetACP(), 0, script ? script : L"", len, psz, (int)len * 2 + 1, NULL, NULL);
+    int m = WideCharToMultiByte(GetACP(), 0, script ? script : L"", len, psz, (int)len * 2 + 1, NULL, NULL);
     *(psz + m) = '\0';
     volatile VALUE vscript = rb_str_new(psz, m);
     volatile VALUE params[] = {

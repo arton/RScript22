@@ -136,7 +136,7 @@ END_COM_MAP()
             m_listScriptText.push_back(new CScriptText(*it));
         }
     }
-    HRESULT EvalString(int line, int len, LPCSTR script, VARIANT* result = NULL, EXCEPINFO FAR* pExcepInfo = NULL, DWORD dwFlags = 0);
+    HRESULT EvalString(ULONG line, size_t len, LPCSTR script, VARIANT* result = NULL, EXCEPINFO FAR* pExcepInfo = NULL, DWORD dwFlags = 0);
 
     inline void SetPassedObject(VARIANT& v)
     {

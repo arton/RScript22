@@ -16,24 +16,18 @@
 import "oaidl.idl";
 import "ocidl.idl";
 import "activscp.idl";
-
-#if defined(RUBY_2_2)
-#define CLSID_RUBYSCRIPT uuid(456A3763-90A4-4F2A-BFF1-4B773C1056EC)
-#define CLSID_RUBYIZE uuid(0BCFF05A-C2BF-4CB2-A778-3428A8E85A21)
-#else
-#error "no ruby version defined"
-#endif
+#include "version.h"
 
 [
-	uuid(10D4CB67-C6A3-46CF-BE81-B15899ABA602),
-	version(2.2),
-	helpstring("ActiveScriptRuby 2.2")
+	TLIBID,
+	version(VERSION),
+	helpstring("ActiveScriptRuby " RSCRIPT_VERSION)
 ]
 library RScript22Lib
 {
 	importlib("stdole2.tlb");
 	[
-		CLSID_RUBYSCRIPT,
+		UUID_RUBYSCRIPT,
 		helpstring("RubyScript Language (module)")
 	]
 	coclass RubyScript
@@ -55,7 +49,7 @@ library RScript22Lib
 		[id(11)] HRESULT erubyize([in]BSTR script, [out, retval]VARIANT* pObj);
 	};
 	[
-		CLSID_RUBYIZE,
+		UUID_RUBYIZE,
 		helpstring("Rubyize Class")
 	]
 	coclass Rubyize

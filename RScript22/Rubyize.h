@@ -19,13 +19,7 @@
 #include "resource.h"
 #include "RScript22_i.h"
 #include "giplip.h"
-
-#if defined(RUBY_2_2)
-#define MAJOR_VERSION 2
-#define MINOR_VERSION 2
-#else
-#error "no ruby version defined"
-#endif
+#include "version.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CRubyize
