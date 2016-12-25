@@ -57,11 +57,11 @@ HRESULT WINAPI CRubyScript::UpdateRegistry(BOOL bRegister)
 #endif
     RegEntries[2].szData = new WCHAR[len];
     getsysdirfun(const_cast<LPWSTR>(RegEntries[2].szData), len);
-    return _AtlModule.CAtlModule::UpdateRegistryFromResourceS(IDR_RUBYSCRIPT, bRegister, RegEntries);
+    return _AtlModule.CAtlModule::UpdateRegistryFromResource(IDR_RUBYSCRIPT, bRegister, RegEntries);
 }
 HRESULT WINAPI CRubyize::UpdateRegistry(BOOL bRegister)
 {
-    return _AtlModule.CAtlModule::UpdateRegistryFromResourceS(IDR_RUBYIZE, bRegister, RegEntries);
+    return _AtlModule.CAtlModule::UpdateRegistryFromResource(IDR_RUBYIZE, bRegister, RegEntries);
 }
 
 
