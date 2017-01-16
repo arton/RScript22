@@ -1,0 +1,34 @@
+﻿2017/01/16 22:32:19 にビルドを開始しました。
+     1>ノード 2 上のプロジェクト "Z:\devl\github\RScript22\RScript22\test\ConnectTest\ConnectTest\ConnectTest.vcxproj" (build ターゲット)。
+     1>InitializeBuildStatus:
+         "Debug\ConnectTest.unsuccessfulbuild" のタッチ タスクを実行しています。
+       ClCompile:
+         すべての出力が最新のものです。
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"StdAfx.h" /Fp"Debug\ConnectTest.pch" /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt ConnectTest.cpp
+         ConnectTest.cpp
+     1>z:\devl\github\rscript22\rscript22\test\connecttest\connecttest\connecttest.cpp(101): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\stdio.h(371) : 'sprintf' の宣言を確認してください。
+     1>z:\devl\github\rscript22\rscript22\test\connecttest\connecttest\connecttest.cpp(195): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\stdio.h(371) : 'sprintf' の宣言を確認してください。
+       ManifestResourceCompile:
+         すべての出力が最新のものです。
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"Z:\devl\github\RScript22\RScript22\test\ConnectTest\Debug\ConnectTest.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\ConnectTest.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"Z:\devl\github\RScript22\RScript22\test\ConnectTest\Debug\ConnectTest.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"Z:\devl\github\RScript22\RScript22\test\ConnectTest\Debug\ConnectTest.lib" /MACHINE:X86 Debug\ConnectTest.exe.embed.manifest.res
+         Debug\ConnectTest.obj
+         Debug\stdafx.obj
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /out:"Debug\ConnectTest.exe.embed.manifest" /manifest Debug\ConnectTest.exe.intermediate.manifest
+         すべての出力が最新のものです。
+       LinkEmbedManifest:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"Z:\devl\github\RScript22\RScript22\test\ConnectTest\Debug\ConnectTest.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\ConnectTest.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"Z:\devl\github\RScript22\RScript22\test\ConnectTest\Debug\ConnectTest.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"Z:\devl\github\RScript22\RScript22\test\ConnectTest\Debug\ConnectTest.lib" /MACHINE:X86 Debug\ConnectTest.exe.embed.manifest.res
+         Debug\ConnectTest.obj
+         Debug\stdafx.obj
+         ConnectTest.vcxproj -> Z:\devl\github\RScript22\RScript22\test\ConnectTest\Debug\ConnectTest.exe
+       FinalizeBuildStatus:
+         ファイル "Debug\ConnectTest.unsuccessfulbuild" を削除しています。
+         "Debug\ConnectTest.lastbuildstate" のタッチ タスクを実行しています。
+     1>プロジェクト "Z:\devl\github\RScript22\RScript22\test\ConnectTest\ConnectTest\ConnectTest.vcxproj" (build ターゲット) のビルドが完了しました。
+
+ビルドに成功しました。
+
+経過時間 00:00:03.96

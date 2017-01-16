@@ -261,17 +261,17 @@ HRESULT STDMETHODCALLTYPE CRubyScript::SetScriptState(
 	switch (ss)
 	{
 	case SCRIPTSTATE_STARTED:
-            CreateActiveScriptRuby();
+        CreateActiveScriptRuby();
 	    BindNamedItem();
 	    break;
 	case SCRIPTSTATE_CONNECTED:
-            CreateActiveScriptRuby();
+        CreateActiveScriptRuby();
 	    Connect();
 	    BindNamedItem();
 	    ConnectToEvents();
 	    break;
 	case SCRIPTSTATE_INITIALIZED:
-            CreateActiveScriptRuby();
+        CreateActiveScriptRuby();
 	    Disconnect(true);	// Disconnect all Sink
 	    UnbindNamedItem();
 	    break;
@@ -301,7 +301,7 @@ HRESULT STDMETHODCALLTYPE CRubyScript::SetScriptState(
                     m_pSite.Unglobalize();
                     ATLTRACE(_T("no scriptsite in SetScriptState %d\n"), ss);
                 }
-                if (ss == SCRIPTSTATE_STARTED && m_listScriptText.size() > 0)
+                if ((ss == SCRIPTSTATE_STARTED || ss == SCRIPTSTATE_CONNECTED) && m_listScriptText.size() > 0)
                 {
                     EnterScript();
                     for (; m_listScriptText.size() > 0;)
