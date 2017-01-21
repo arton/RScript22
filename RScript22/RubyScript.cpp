@@ -893,7 +893,14 @@ void CRubyScript::Disconnect(bool fSinkOnly)
 
     if (m_asr != Qnil)
     {
-        rb_funcall(m_asr, rb_intern("remove_items"), 0);
+        int state(0);
+        volatile VALUE params[] = {
+            m_asr,
+            rb_intern("remove_items"),
+            0,
+            Qnil // dummy
+        };
+        rb_protect(safe_funcall, (VALUE)params, &state);
         rb_gc_unregister_address(&m_asr);
         m_asr = Qnil;
     }
